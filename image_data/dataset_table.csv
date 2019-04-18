@@ -1,0 +1,5 @@
+DATASET_TABLE:,
+id,labels,dir,
+1,apples,/apples,
+2,mangoes,/mangoes,
+3,oranges,/oranges,

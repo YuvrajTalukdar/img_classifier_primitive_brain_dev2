@@ -1,0 +1,372 @@
+#include"data_package_class.h"
+
+void image_package_class::data_arranger()
+{
+
+}
+
+void image_package_class::border_info_extractor()
+{
+
+}
+
+void image_package_class::contour_finder()
+{
+
+}
+
+int image_package_class::avg_color_in_slice(Mat* slice,char color)//color maper function//ok tested
+{
+    int avg=0;
+    for(int a=0;a<slice->rows;a++)
+    {
+        for(int b=0;b<slice->cols;b++)
+        {
+            if(color=='r'||color=='R')
+            {   avg+=(int)slice->at<Vec3b>(a,b)[2];}
+            else if(color=='g'||color=='G')
+            {   avg+=(int)slice->at<Vec3b>(a,b)[1];}
+            else if(color=='b'||color=='B')
+            {   avg+=(int)slice->at<Vec3b>(a,b)[0];}
+        }
+    }
+    avg=avg/(slice->rows*slice->cols);
+    return avg;
+}
+
+float image_package_class::color_distance(image_map_element* origin_element,image_map_element* new_element)//color maper function//ok tested
+{
+    float distance=sqrt((origin_element->avg_red-new_element->avg_red)*(origin_element->avg_red-new_element->avg_red)+(origin_element->avg_green-new_element->avg_green)*(origin_element->avg_green-new_element->avg_green)+(origin_element->avg_blue-new_element->avg_blue)*(origin_element->avg_blue-new_element->avg_blue));
+    return distance;
+}
+
+void image_package_class::search_for_neighbour(image_map_element* element,vector<vector<int>>* result)//color maper function//ok tested
+{
+    int col_index=element->col_index,row_index=element->row_index;
+    int new_col_index,new_row_index;
+    vector<int> co_ordinate(2);
+    int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
+    for(int a=0;a<8;a++)
+    {
+        new_col_index=col_index+delta_co_ordinates[a][1];
+        new_row_index=row_index+delta_co_ordinates[a][0];
+        if(new_col_index>=0 && new_row_index>=0 && new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size())
+        {
+            if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance(element,image_map.at(new_row_index).at(new_col_index))<=color_sensitiviy)
+            {
+                co_ordinate.at(0)=new_row_index;
+                co_ordinate.at(1)=new_col_index;
+                result->push_back(co_ordinate);
+            }
+        }
+    }
+}
+
+void image_package_class::remove_non_free_elements(vector<vector<int>>* result)//color maper function//ok tested
+{
+    vector<bool> free_status(result->size());
+    for(int a=0;a<result->size();a++)
+    {
+        if(image_map.at(result->at(a).at(0)).at(result->at(a).at(1))->select_status==true)
+        {   free_status.at(a)=false;}
+        else
+        {   free_status.at(a)=true;}
+    }
+    for(int a=free_status.size()-1;a>=0;a--)
+    {
+        if(free_status.at(a)==false)
+        {   result->erase(result->begin()+a);}
+    }
+}
+
+void image_package_class::create_color_maps()//color maper function//ok tested
+{
+    no_of_slices_row_wise=(orig_image_temp->rows)/slice_row_size;
+    no_of_slices_col_wise=(orig_image_temp->cols)/slice_col_size;
+    //initializing the image map
+    image_map.clear();
+    int startx=0,starty=0;
+    for(int a=0;a<no_of_slices_row_wise;a++)
+    {
+        vector<image_map_element*> map_row_temp;
+        for(int b=0;b<no_of_slices_col_wise;b++)
+        {
+            image_map_element *element=new image_map_element();
+            element->col_index=b;
+            element->row_index=a;
+            Mat* slice=new Mat();
+            Mat ROI(*orig_image_temp,Rect(startx,starty,slice_row_size,slice_col_size));
+            ROI.copyTo(*slice);
+            element->avg_blue=avg_color_in_slice(slice,'b');
+            element->avg_green=avg_color_in_slice(slice,'g');
+            element->avg_red=avg_color_in_slice(slice,'r');
+            //cout<<"\nstartx="<<startx<<" starty="<<starty<<", r="<<element.avg_red<<", g="<<element.avg_green<<", b="<<element.avg_blue;
+            //imshow("slice",*slice);
+            //waitKey(0);
+            slice->release();
+            startx+=slice_row_size;
+            map_row_temp.push_back(element);
+        }
+        startx=0;
+        starty+=slice_col_size;
+        image_map.push_back(map_row_temp);
+        map_row_temp.clear();
+    }
+    //object mapping process
+    obj_vec.clear();
+    int obj_index=0;
+    for(int a=0;a<image_map.size();a++)//moving through the rows
+    {
+        for(int b=0;b<image_map.at(a).size();b++)//moving through the cols
+        {
+            if(image_map.at(a).at(b)->select_status==true)
+            {   continue;}
+            vector<vector<int>> result_buffer;
+            result_buffer.clear();
+            vector<vector<int>> result;
+            result.clear();
+            vector<image_map_element*> obj_elements_vec;
+            obj_elements_vec.clear();
+            //for entering the first element in the obj_element_vec
+            image_map.at(a).at(b)->obj_id=obj_index;
+            obj_elements_vec.push_back(image_map.at(a).at(b));
+            image_map.at(a).at(b)->select_status=true;
+            //for searching and adding the rest of the element in the obj_element_vec
+            search_for_neighbour(image_map.at(a).at(b),&result);
+            point1:
+            if(result_buffer.size()!=0)
+            {
+                image_map.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1))->obj_id=obj_index;
+                obj_elements_vec.push_back(image_map.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)));
+                image_map.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1))->select_status=true;
+                result.clear();
+                search_for_neighbour(image_map.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)),&result);
+            }
+            while(result.size()>0)
+            {
+                image_map.at(result.at(0).at(0)).at(result.at(0).at(1))->obj_id=obj_index;
+                obj_elements_vec.push_back(image_map.at(result.at(0).at(0)).at(result.at(0).at(1)));
+                image_map.at(result.at(0).at(0)).at(result.at(0).at(1))->select_status=true;
+                int row_index=result.at(0).at(0),col_index=result.at(0).at(1);//for storing the current element co-ordinates
+                //before clearig other results needs to be handled
+                if(result.size()>1)
+                {
+                    for(int c=1;c<result.size();c++)//adds all the results into the buffer excluding the first one
+                    {   result_buffer.push_back(result.at(c));}
+                }
+                result.clear();
+                search_for_neighbour(image_map.at(row_index).at(col_index),&result);
+            }
+            remove_non_free_elements(&result_buffer);
+            if(result_buffer.size()!=0)
+            {   goto point1;}
+            obj_index++;
+            obj_vec.push_back(obj_elements_vec);
+        }
+    }
+    //cout<<"\n\nok";
+}
+
+void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,string orig_img_path)//for testing create_color_maps() function
+{
+    cout<<"\nno_of_objects detected= "<<obj_vec_for_one_img->size();
+    Mat *orig_image_temp1=new Mat();
+    *orig_image_temp1=imread(orig_img_path);
+    Mat obj_map_plotted;
+    obj_map_plotted.create(orig_image_temp1->size(),orig_image_temp1->type());
+    obj_map_plotted = Scalar::all(0);
+    srand(time(NULL));//"initialize random seed:" as reported in the docs
+    no_of_slices_row_wise=(orig_image_temp1->rows)/slice_row_size;
+    no_of_slices_col_wise=(orig_image_temp1->cols)/slice_col_size;
+    
+    int total_no_of_elements_calc=0;
+    for(int a=0;a<obj_vec_for_one_img->size();a++)
+    {
+        int rand_red=rand()%255+0,rand_green=rand()%255+0,rand_blue=rand()%255+0;
+        if(obj_vec_for_one_img->at(a).size()>min_size_of_obj)
+        {
+            //cout<<"\na="<<obj_vec.at(a).size();
+            total_no_of_elements_calc+=obj_vec_for_one_img->at(a).size();
+            for(int b=0;b<obj_vec_for_one_img->at(a).size();b++)
+            {  
+                int orig_row_index=obj_vec_for_one_img->at(a).at(b)->row_index*slice_row_size,orig_col_index=obj_vec_for_one_img->at(a).at(b)->col_index*slice_col_size;
+                for(int e=orig_row_index;e<orig_row_index+slice_row_size;e++)
+                {
+                    for(int f=orig_col_index;f<orig_col_index+slice_col_size;f++)
+                    {
+                        obj_map_plotted.at<Vec3b>(e,f)[0]=rand_blue;//blue
+                        obj_map_plotted.at<Vec3b>(e,f)[1]=rand_green;//green
+                        obj_map_plotted.at<Vec3b>(e,f)[2]=rand_red;//red
+                    }
+                }
+            }
+        }
+    }
+    //cout<<"\ntotal_no_of_elements="<<obj_vec_for_one_img->size()*obj_vec_for_one_img->at(0).size();
+    cout<<"\ntotal_no_of_elements_calc="<<total_no_of_elements_calc;
+    string img_name;
+    img_name.append(orig_img_path);
+    //img_name.append(to_string(color_sensitiviy));
+    //img_name.push_back(',');
+    //img_name.push_back(*to_string(slice_row_size).c_str());
+    img_name.append(".png");
+    imwrite(img_name.c_str(),obj_map_plotted);
+    //imshow("obj_map",*orig_image_temp1);
+    //waitKey(0);
+    cout<<"\ncols="<<obj_map_plotted.cols<<" rows="<<obj_map_plotted.rows;
+    //int gh;cin>>gh;
+    //imshow("obj_map",obj_map_plotted);
+    //waitKey(0);
+    obj_map_plotted.release();
+    orig_image_temp->release();
+}
+
+void image_package_class::start_data_preparation_process()
+{
+    clean_up_prepared_data_obj();
+    for(unsigned int a=0;a<image_paths.size();a++)
+    {
+        orig_image_temp=new Mat();
+        *orig_image_temp=imread(image_paths[a]);
+        create_color_maps();
+
+        contour_finder();
+        border_info_extractor();
+        data_arranger();
+        orig_image_temp->release();
+
+        save_current_img_data();
+    }
+}
+
+void image_package_class::save_current_img_data()
+{
+    prepared_data_obj.image_map_vec.push_back(image_map);
+    prepared_data_obj.obj_vec_for_each_img.push_back(obj_vec);
+}
+
+void image_package_class::clean_up_prepared_data_obj()
+{
+    prepared_data_obj.image_map_vec.clear();
+    prepared_data_obj.obj_vec_for_each_img.clear();
+}
+
+void image_package_class::enter_training_critical_variables(float color_sensi,int slice_row,int slice_col)
+{
+    color_sensitiviy=color_sensi;
+    slice_row_size=slice_row;
+    slice_col_size=slice_col;
+}
+
+void image_package_class::enter_image_metadata(string img_name,string img_path)
+{   
+    image_file_name.push_back(img_name);
+    image_paths.push_back(img_path);
+}
+
+void image_package_class::enter_image_metadata(int id_,string label_,string dir_path_)
+{
+    if(lock_enabled==false)
+    {
+        label_id=id_;
+        label_str=label_;
+        dir_path="image_data";
+        dir_path.append(dir_path_);
+        dir_path.append("/.");
+        lock_enabled=true;
+    }
+    else
+    {   cout<<"object locked";}
+}
+
+void image_package_class::enter_image_metadata(int start_index,vector<string> *img_file_name,vector<string> *img_paths)
+{
+    cout<<"\nstart index= "<<start_index;
+    image_file_name.insert(image_file_name.end(),img_file_name->begin()+start_index,img_file_name->end());
+    image_paths.insert(image_paths.end(),img_paths->begin()+start_index,img_paths->end());
+}
+
+void image_package_class::remove_image_metadata(int start_index)
+{
+    image_file_name.erase(image_file_name.begin()+start_index,image_file_name.end());
+    image_paths.erase(image_paths.begin()+start_index,image_paths.end());
+}
+
+void image_package_class::split_package_data(vector<image_package_class*> *ipc_vec)
+{
+    cout<<"\nspliting started...";
+    if(ipc_vec->size()>return_no_of_images())
+    {
+        int size=ipc_vec->size();
+        for(int a=0;a<(size-return_no_of_images()+1);a++)
+        {   ipc_vec->pop_back();}
+    }
+   
+    int no_of_img_per_vec=return_no_of_images()/(ipc_vec->size()+1);
+    int b=image_file_name.size()-1,start_index;
+    for(int a=0;a<ipc_vec->size();a++)
+    {
+        //load meta data
+        ipc_vec->at(a)->enter_image_metadata(label_id,label_str,dir_path);
+        start_index=image_file_name.size()-no_of_img_per_vec;
+        //copy the required data
+        ipc_vec->at(a)->enter_image_metadata(start_index,&image_file_name,&image_paths);
+        //delete the required data
+        remove_image_metadata(start_index);
+    }
+    
+    cout<<"\nspliting complete";
+}
+
+void image_package_class::combine_package_data(vector<image_package_class*> *ipc_vec)
+{
+    cout<<"\nchecking part (temporary)";
+    //combination part
+    for(int a=0;a<ipc_vec->size();a++)
+    {
+        for(int b=0;b<ipc_vec->at(a)->return_no_of_images();b++)
+        {
+            //combine meata_data
+            image_paths.push_back(ipc_vec->at(a)->return_img_path(b));
+            image_file_name.push_back(ipc_vec->at(a)->return_img_file_name(b));
+            //combine result_data    
+            prepared_data_obj.image_map_vec.push_back(ipc_vec->at(a)->prepared_data_obj.image_map_vec.at(b));
+            prepared_data_obj.obj_vec_for_each_img.push_back(ipc_vec->at(a)->prepared_data_obj.obj_vec_for_each_img.at(b));
+        }
+        ipc_vec->at(a)->clean_up_all_the_data_addresses();
+        //under construction for rest of the result data
+    }
+    //for testing
+    //for(int a=0;a<prepared_data_obj.obj_vec_for_each_img.size();a++)
+    //{   plot_obj_maps(&prepared_data_obj.obj_vec_for_each_img.at(a),image_paths.at(a));}
+}
+
+void image_package_class::clean_up_all_the_data_addresses()
+{
+    image_paths.clear();
+    image_file_name.clear();
+    prepared_data_obj.obj_vec_for_each_img.clear();
+    prepared_data_obj.image_map_vec.clear();
+    image_map.clear();
+    obj_vec.clear();
+}
+
+image_package_class::image_package_class(int id_,string label_,string dir_path_)
+{
+    if(lock_enabled==false)
+    {
+        label_id=id_;
+        label_str=label_;
+        dir_path="image_data";
+        dir_path.append(dir_path_);
+        dir_path.append("/.");
+        lock_enabled=true;
+    }
+    else
+    {   cout<<"object locked";}
+}
+
+image_package_class::image_package_class()
+{
+    //blank constructor for empth package.
+}
