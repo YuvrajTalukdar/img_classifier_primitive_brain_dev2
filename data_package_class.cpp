@@ -34,6 +34,38 @@ int image_package_class::avg_color_in_slice(Mat* slice,char color)//color maper 
     return avg;
 }
 
+float image_package_class::color_distance2(image_map_element* origin_element,image_map_element* new_element)//color maper function//ok tested but poor result than its counterpart
+{
+    int close_elements=0;
+    int orig_row_index=origin_element->row_index*slice_row_size,orig_col_index=origin_element->col_index*slice_col_size;
+    int new_row_index=new_element->row_index*slice_row_size,new_col_index=new_element->col_index*slice_col_size;
+    Mat* orig_element_slice=new Mat();
+    Mat ROI1(*orig_image_temp,Rect(orig_col_index,orig_row_index,slice_row_size,slice_col_size));
+    ROI1.copyTo(*orig_element_slice);
+    Mat* new_element_slice=new Mat();
+    Mat ROI2(*orig_image_temp,Rect(new_col_index,new_row_index,slice_row_size,slice_col_size));
+    ROI2.copyTo(*new_element_slice);
+    for(int a=0;a<slice_row_size;a++)
+    {
+        for(int b=0;b<slice_col_size;b++)
+        {
+            for(int c=0;c<slice_row_size;c++)
+            {
+                for(int d=0;d<slice_col_size;d++)
+                {
+                    int red_orig=orig_element_slice->at<Vec3b>(c,d)[2],green_orig=orig_element_slice->at<Vec3b>(c,d)[1],blue_orig=orig_element_slice->at<Vec3b>(c,d)[0];
+                    int red_new=new_element_slice->at<Vec3b>(a,b)[2],green_new=new_element_slice->at<Vec3b>(a,b)[1],blue_new=new_element_slice->at<Vec3b>(a,b)[0];
+                    if(sqrt(pow((red_orig-red_new),2)+pow((green_orig-green_new),2)+pow((blue_orig-blue_new),2))<color_sensitiviy)
+                    {   close_elements++;}
+                }
+            }
+        }
+    }
+    float total=pow((slice_col_size*slice_row_size),2);
+    float percentage=(((float)close_elements)/(float)total)*((float)100.0);
+    return percentage;
+}
+
 float image_package_class::color_distance(image_map_element* origin_element,image_map_element* new_element)//color maper function//ok tested
 {
     float distance=sqrt((origin_element->avg_red-new_element->avg_red)*(origin_element->avg_red-new_element->avg_red)+(origin_element->avg_green-new_element->avg_green)*(origin_element->avg_green-new_element->avg_green)+(origin_element->avg_blue-new_element->avg_blue)*(origin_element->avg_blue-new_element->avg_blue));
@@ -53,6 +85,7 @@ void image_package_class::search_for_neighbour(image_map_element* element,vector
         if(new_col_index>=0 && new_row_index>=0 && new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size())
         {
             if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance(element,image_map.at(new_row_index).at(new_col_index))<=color_sensitiviy)
+            //if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance2(element,image_map.at(new_row_index).at(new_col_index))>=percentage_of_close_pixels)
             {
                 co_ordinate.at(0)=new_row_index;
                 co_ordinate.at(1)=new_col_index;
@@ -167,7 +200,7 @@ void image_package_class::create_color_maps()//color maper function//ok tested
     //cout<<"\n\nok";
 }
 
-void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,string orig_img_path)//for testing create_color_maps() function
+void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,string orig_img_path)//for testing create_color_maps() function//ok tested
 {
     cout<<"\nno_of_objects detected= "<<obj_vec_for_one_img->size();
     Mat *orig_image_temp1=new Mat();
@@ -221,6 +254,130 @@ void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_
     orig_image_temp->release();
 }
 
+void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results)//need testing
+{
+    for(int a=0;a<obj->size();a++)
+    {
+        int col_index=obj->at(a)->col_index,row_index=obj->at(a)->row_index;
+        int new_col_index,new_row_index;
+        int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
+        for(int a=0;a<8;a++)
+        {
+            new_col_index=col_index+delta_co_ordinates[a][1];
+            new_row_index=row_index+delta_co_ordinates[a][0];
+            //check the presence of the new co-ordinates in the obj list
+            for(int b=0;b<list_of_all_objs->size();b++)
+            {
+                for(int c=0;c<list_of_all_objs->at(b).size();c++)
+                {
+                    if(list_of_all_objs->at(a).at(b)->col_index==new_col_index && list_of_all_objs->at(a).at(b)->row_index==new_row_index && list_of_all_objs->at(a).at(b)->obj_id!=obj->at(0)->obj_id)
+                    {   results->push_back(list_of_all_objs->at(a));}
+                }
+            }
+        }
+    }
+}
+
+void image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,image_map_element *element)//need testing
+{
+    int required_no_of_sq_for_finding_avg=no_of_sq_areas_need_to_be_checked_for_avg_color;
+    vector<float> distance1;
+    vector<obj_distance> neighbouring_obj_cell_and_current_obj_distance_vec;
+    struct sortingclass_for_neighbouring_obj_cell_and_current_obj_distance_vec
+    {
+        bool operator() (obj_distance obj1,obj_distance obj2) 
+        { return (obj1.distance<obj2.distance);}
+    }sorting_helper2;
+    vector<image_map_element*> obj_info;
+    for(int a=0;a<list_of_neighbouring_objs->size();a++)
+    {
+        if(list_of_neighbouring_objs->at(a).size()<no_of_sq_areas_need_to_be_checked_for_avg_color)//some bug may be here
+        {   required_no_of_sq_for_finding_avg=list_of_neighbouring_objs->at(a).size();}
+        int nearest_distance=-1;
+        //this finds the nearest possible distance between a cell of the neighbouring objand the current obj. 
+        neighbouring_obj_cell_and_current_obj_distance_vec.clear();
+        for(int b=0;b<list_of_neighbouring_objs->at(a).size();b++)
+        {
+            distance1.clear();
+            for(int c=0;c<obj->size();c++)
+            {   distance1.push_back(sqrt(pow((list_of_neighbouring_objs->at(a).at(b)->row_index-obj->at(c)->row_index),2)+pow((list_of_neighbouring_objs->at(a).at(b)->row_index-obj->at(c)->row_index),2)));}
+            sort(distance1.begin(),distance1.end());          
+            obj_distance obj1;
+            obj1.distance=distance1.at(0);
+            obj1.obj_id1=obj->at(0)->obj_id;
+            obj1.obj_id2=list_of_neighbouring_objs->at(a).at(b)->obj_id;//b can be 0 too
+            obj1.red=list_of_neighbouring_objs->at(a).at(b)->avg_red;
+            obj1.green=list_of_neighbouring_objs->at(a).at(b)->avg_green;
+            obj1.blue=list_of_neighbouring_objs->at(a).at(b)->avg_blue;
+            neighbouring_obj_cell_and_current_obj_distance_vec.push_back(obj1);
+        }
+        sort(neighbouring_obj_cell_and_current_obj_distance_vec.begin(),neighbouring_obj_cell_and_current_obj_distance_vec.end(),sorting_helper2);
+        //calculating the avg color for required_no_of_sq_for_finding_avg of neighbouring_obj
+        image_map_element *element1=new image_map_element(); 
+        element1->obj_id=list_of_neighbouring_objs->at(a).at(0)->obj_id;
+        for(int b=0;b<required_no_of_sq_for_finding_avg;b++)
+        {
+            element1->avg_blue+=neighbouring_obj_cell_and_current_obj_distance_vec.at(b).blue;
+            element1->avg_green+=neighbouring_obj_cell_and_current_obj_distance_vec.at(b).green;
+            element1->avg_blue+=neighbouring_obj_cell_and_current_obj_distance_vec.at(b).blue;
+        }
+        element1->avg_blue/required_no_of_sq_for_finding_avg;
+        element1->avg_green/required_no_of_sq_for_finding_avg;
+        element1->avg_red/required_no_of_sq_for_finding_avg;
+        obj_info.push_back(element1);
+    }
+    neighbouring_obj_cell_and_current_obj_distance_vec.clear();
+    //checking which obj is most appropriate to be included in the current obj
+        //get the avg color of the current obj
+    image_map_element *element2=new image_map_element();
+    element2->obj_id=obj->at(0)->obj_id;
+    for(int a=0;a<obj->size();a++)
+    {
+        element2->avg_red+=obj->at(a)->avg_red;
+        element2->avg_green+=obj->at(a)->avg_green;
+        element2->avg_blue+=obj->at(a)->avg_blue;
+    }
+    element2->avg_red/obj->size();
+    element2->avg_green/obj->size();
+    element2->avg_blue/obj->size();
+    for(int a=0;a<obj_info.size();a++)
+    {
+        obj_distance obj1;
+        obj1.obj_id1=obj->at(0)->obj_id;
+        obj1.obj_id2=obj_info.at(a)->obj_id;
+        obj1.distance=sqrt(pow((obj_info.at(a)->avg_red-element2->avg_red),2)+pow((obj_info.at(a)->avg_green-element2->avg_green),2)+pow((obj_info.at(a)->avg_blue-element2->avg_blue),2));
+        neighbouring_obj_cell_and_current_obj_distance_vec.push_back(obj1);
+    }
+    sort(neighbouring_obj_cell_and_current_obj_distance_vec.begin(),neighbouring_obj_cell_and_current_obj_distance_vec.end(),sorting_helper2);
+    element->obj_id=neighbouring_obj_cell_and_current_obj_distance_vec.at(0).obj_id2;
+    //needs detailed testing and efficiency needs to be improved
+}
+
+void image_package_class::same_obj_combination_process()//need testing, under construction
+{
+    vector<vector<image_map_element*>> obj_vec_temp;
+    obj_vec_temp=obj_vec;
+    sort(obj_vec_temp.begin(),obj_vec_temp.end(),sorting_helper1);
+    vector<vector<image_map_element*>> neighbours_found;
+    for(int a=0;a<obj_vec_temp.size();a++)
+    {
+        if(obj_vec_temp.at(a).size()<min_size_of_obj)
+        {
+            neighbours_found.clear();
+            find_neighbouring_objs(&obj_vec_temp.at(a),&obj_vec_temp,&neighbours_found);
+            //calc avg color of neighbouring obj. For only a small nearby portion of the neighbouring obj.
+            image_map_element element;
+            find_neighbouring_obj_avg_color_of_closest_area(&obj_vec_temp.at(a),&neighbours_found,&element);
+            //add the obj to its required neighbour
+            //remove the obj
+
+            //handle the loop as size change is going on 
+        }
+        cout<<"\nsize="<<obj_vec_temp.at(a).size();
+    }
+    int gh;cin>>gh;
+}
+
 void image_package_class::start_data_preparation_process()
 {
     clean_up_prepared_data_obj();
@@ -229,6 +386,7 @@ void image_package_class::start_data_preparation_process()
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
         create_color_maps();
+        same_obj_combination_process();
 
         contour_finder();
         border_info_extractor();
@@ -251,9 +409,11 @@ void image_package_class::clean_up_prepared_data_obj()
     prepared_data_obj.obj_vec_for_each_img.clear();
 }
 
-void image_package_class::enter_training_critical_variables(float color_sensi,int slice_row,int slice_col)
+void image_package_class::enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color1,float color_sensi,int slice_row,int slice_col,int min_size_of_obj1)
 {
+    min_size_of_obj=min_size_of_obj1;
     color_sensitiviy=color_sensi;
+    no_of_sq_areas_need_to_be_checked_for_avg_color=no_of_sq_areas_need_to_be_checked_for_avg_color1;
     slice_row_size=slice_row;
     slice_col_size=slice_col;
 }
@@ -337,8 +497,9 @@ void image_package_class::combine_package_data(vector<image_package_class*> *ipc
         //under construction for rest of the result data
     }
     //for testing
-    //for(int a=0;a<prepared_data_obj.obj_vec_for_each_img.size();a++)
-    //{   plot_obj_maps(&prepared_data_obj.obj_vec_for_each_img.at(a),image_paths.at(a));}
+    for(int a=0;a<prepared_data_obj.obj_vec_for_each_img.size();a++)
+    {   plot_obj_maps(&prepared_data_obj.obj_vec_for_each_img.at(a),image_paths.at(a));}
+    //int gh;cin>>gh;
 }
 
 void image_package_class::clean_up_all_the_data_addresses()
@@ -368,5 +529,5 @@ image_package_class::image_package_class(int id_,string label_,string dir_path_)
 
 image_package_class::image_package_class()
 {
-    //blank constructor for empth package.
+    //blank constructor for empty package.
 }
