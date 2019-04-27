@@ -112,6 +112,7 @@ class image_package_class
         int obj_id=-1;
         bool select_status=false;
         unsigned int avg_red,avg_green,avg_blue;
+        bool border_directions[8];//if true there is a border (new obj) in the particular direction
     };
     vector<vector<image_map_element*>> image_map;//the main img map
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
@@ -158,6 +159,7 @@ class image_package_class
         float distance;
     };
     void find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,image_map_element *element);//need testing
+    bool check_if_element_is_border_element(image_map_element* element);
     void find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results);//need testing
     struct sortingclass1 
     {

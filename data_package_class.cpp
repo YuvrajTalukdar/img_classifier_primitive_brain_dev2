@@ -254,28 +254,101 @@ void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_
     orig_image_temp->release();
 }
 
+bool image_package_class::check_if_element_is_border_element(image_map_element* element)
+{
+    bool border_element=false;
+    int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
+    int col_index=element->col_index,row_index=element->row_index;
+    int new_col_index,new_row_index;
+    int id=element->obj_id;
+    for(int a=0;a<8;a++)
+    {
+        new_col_index=col_index+delta_co_ordinates[a][1];
+        new_row_index=row_index+delta_co_ordinates[a][0];
+        if(new_col_index>=0 && new_row_index>=0 && new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size())
+        {
+            if(image_map.at(new_row_index).at(new_col_index)->obj_id!=id)
+            {   border_element=true;break;}
+        }
+        else
+        {   border_element=true;break;}
+    }
+    return border_element;
+}
+
 void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results)//need testing
 {
+    int new_col_index,new_row_index;
+    int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
+    //detect the first bordel cell by brut force
+    image_map_element *border_element;
+    vector<image_map_element*> border_element_vec;
     for(int a=0;a<obj->size();a++)
     {
         int col_index=obj->at(a)->col_index,row_index=obj->at(a)->row_index;
-        int new_col_index,new_row_index;
-        int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
-        for(int a=0;a<8;a++)
+        bool border_element_found=false;
+        for(int b=0;b<8;b++)
         {
-            new_col_index=col_index+delta_co_ordinates[a][1];
-            new_row_index=row_index+delta_co_ordinates[a][0];
-            //check the presence of the new co-ordinates in the obj list
-            for(int b=0;b<list_of_all_objs->size();b++)
+            new_col_index=col_index+delta_co_ordinates[b][1];
+            new_row_index=row_index+delta_co_ordinates[b][0];
+            if(new_col_index>=0 && new_row_index>=0 && new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size())
             {
-                for(int c=0;c<list_of_all_objs->at(b).size();c++)
+                if(image_map.at(new_row_index).at(new_col_index)->obj_id!=obj->at(a)->obj_id)
+                {   obj->at(a)->border_directions[b]=true;border_element_found=true;}
+                else
+                {   obj->at(a)->border_directions[b]=false;}
+            }
+        }
+        if(border_element_found==true)
+        {   border_element=obj->at(a);break;}
+    }
+    border_element_vec.push_back(border_element);
+    
+    //detect the  rest of the border elements
+    int a=0;
+    point1:
+    int index_of_first_element_added=-1;
+    bool new_element_added=false;
+    for(a;a<border_element_vec.size();a++)
+    {
+        for(int b=0;b<8;b++)
+        {
+            new_col_index=border_element_vec.at(a)->col_index+delta_co_ordinates[b][1];
+            new_row_index=border_element_vec.at(a)->row_index+delta_co_ordinates[b][0];
+            if(new_col_index>=0 && new_row_index>=0 && 
+               new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() && 
+               check_if_element_is_border_element(image_map.at(new_row_index).at(new_col_index))==true &&
+               image_map.at(new_row_index).at(new_col_index)->obj_id==border_element_vec.at(a)->obj_id)
+            {
+                bool found=false;
+                for(int c=0;c<border_element_vec.size();c++)
                 {
-                    if(list_of_all_objs->at(a).at(b)->col_index==new_col_index && list_of_all_objs->at(a).at(b)->row_index==new_row_index && list_of_all_objs->at(a).at(b)->obj_id!=obj->at(0)->obj_id)
-                    {   results->push_back(list_of_all_objs->at(a));}
+                    if(border_element_vec.at(c)->row_index==image_map.at(new_row_index).at(new_col_index)->row_index &&
+                       border_element_vec.at(c)->col_index==image_map.at(new_row_index).at(new_col_index)->col_index)
+                    {   found=true;break;}
+                }
+                if(found==false)
+                {   
+                    border_element_vec.push_back(image_map.at(new_row_index).at(new_col_index));new_element_added=true;
+                    if(index_of_first_element_added!=-1)
+                    {   index_of_first_element_added=a;}
                 }
             }
         }
     }
+    if(new_element_added==true)
+    {
+        a=index_of_first_element_added;
+        goto point1;
+    }
+    
+    cout<<"\n\nresults=\n\n";
+    for(int a=0;a<border_element_vec.size();a++)
+    {
+        cout<<"("<<border_element_vec.at(a)->row_index<<","<<border_element_vec.at(a)->col_index<<")";
+    }
+    cout<<"\nsize="<<border_element_vec.size();
+
 }
 
 void image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,image_map_element *element)//need testing
@@ -359,22 +432,55 @@ void image_package_class::same_obj_combination_process()//need testing, under co
     obj_vec_temp=obj_vec;
     sort(obj_vec_temp.begin(),obj_vec_temp.end(),sorting_helper1);
     vector<vector<image_map_element*>> neighbours_found;
-    for(int a=0;a<obj_vec_temp.size();a++)
+    /*for(int a=0;a<obj_vec_temp.size();a++)
     {
         if(obj_vec_temp.at(a).size()<min_size_of_obj)
         {
             neighbours_found.clear();
             find_neighbouring_objs(&obj_vec_temp.at(a),&obj_vec_temp,&neighbours_found);
             //calc avg color of neighbouring obj. For only a small nearby portion of the neighbouring obj.
-            image_map_element element;
-            find_neighbouring_obj_avg_color_of_closest_area(&obj_vec_temp.at(a),&neighbours_found,&element);
+            //image_map_element element;
+            //find_neighbouring_obj_avg_color_of_closest_area(&obj_vec_temp.at(a),&neighbours_found,&element);
             //add the obj to its required neighbour
             //remove the obj
 
             //handle the loop as size change is going on 
         }
         cout<<"\nsize="<<obj_vec_temp.at(a).size();
+    }*/
+    //for testing purpose
+    vector<image_map_element*> obj_for_test;
+    cout<<"\nsample obj=\n\n";
+    int b=0,middle=10;
+    for(int a=0;a<10;a++)
+    {
+        if(a==0||a==1||a==2)
+        {
+            for(int c=0;c<10+b;c++)
+            {
+                cout<<"("<<image_map.at(a).at(c)->row_index<<","<<image_map.at(a).at(c)->col_index<<")";
+                image_map.at(a).at(c)->obj_id=-1;
+                obj_for_test.push_back(image_map.at(a).at(c));
+            }
+            cout<<endl;
+        }
+        else
+        {
+            cout<<"("<<image_map.at(a).at(5)->row_index<<","<<image_map.at(a).at(5)->col_index<<")";
+            image_map.at(a).at(5)->obj_id=-1;
+            obj_for_test.push_back(image_map.at(a).at(5));
+
+            cout<<"("<<image_map.at(a).at(6)->row_index<<","<<image_map.at(a).at(6)->col_index<<")";
+            image_map.at(a).at(6)->obj_id=-1;
+            obj_for_test.push_back(image_map.at(a).at(6));
+
+            cout<<"("<<image_map.at(a).at(7)->row_index<<","<<image_map.at(a).at(7)->col_index<<")";
+            image_map.at(a).at(7)->obj_id=-1;
+            obj_for_test.push_back(image_map.at(a).at(7));
+            cout<<endl;
+        }
     }
+    find_neighbouring_objs(&obj_for_test,&obj_vec_temp,&neighbours_found);
     int gh;cin>>gh;
 }
 
