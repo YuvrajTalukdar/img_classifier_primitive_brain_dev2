@@ -276,7 +276,7 @@ bool image_package_class::check_if_element_is_border_element(image_map_element* 
     return border_element;
 }
 
-void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results)//need testing
+void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results)//need testing for neighbouring obj findeing part only
 {
     int new_col_index,new_row_index;
     int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
@@ -294,9 +294,7 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
             if(new_col_index>=0 && new_row_index>=0 && new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size())
             {
                 if(image_map.at(new_row_index).at(new_col_index)->obj_id!=obj->at(a)->obj_id)
-                {   obj->at(a)->border_directions[b]=true;border_element_found=true;}
-                else
-                {   obj->at(a)->border_directions[b]=false;}
+                {   border_element_found=true;}
             }
         }
         if(border_element_found==true)
@@ -342,13 +340,36 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
         goto point1;
     }
     
-    cout<<"\n\nresults=\n\n";
-    for(int a=0;a<border_element_vec.size();a++)
+    //detection of the neighbouring objects
+    for(a=0;a<border_element_vec.size();a++)
     {
-        cout<<"("<<border_element_vec.at(a)->row_index<<","<<border_element_vec.at(a)->col_index<<")";
+        for(int b=0;b<8;b++)
+        {
+            new_col_index=border_element_vec.at(a)->col_index+delta_co_ordinates[b][1];
+            new_row_index=border_element_vec.at(a)->row_index+delta_co_ordinates[b][0];
+            //cout<<"\nrow="<<new_row_index<<" col="<<new_col_index;
+            if(new_col_index>=0 && new_row_index>=0 &&
+               new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() &&
+               border_element_vec.at(a)->obj_id!=image_map.at(new_row_index).at(new_col_index)->obj_id
+               )
+            {
+                bool found=false;
+                for(int c=0;c<results->size();c++)
+                {
+                    if(image_map.at(new_row_index).at(new_col_index)->obj_id==results->at(c).at(0)->obj_id)
+                    {   found=true;break;}
+                }
+                if(found==false)
+                {
+                    for(int c=0;c<list_of_all_objs->size();c++)
+                    {
+                        if(list_of_all_objs->at(c).at(0)->obj_id==image_map.at(new_row_index).at(new_col_index)->obj_id)
+                        {   results->push_back(list_of_all_objs->at(c));break;}
+                    }
+                }
+            }
+        }
     }
-    cout<<"\nsize="<<border_element_vec.size();
-
 }
 
 void image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,image_map_element *element)//need testing
@@ -432,12 +453,19 @@ void image_package_class::same_obj_combination_process()//need testing, under co
     obj_vec_temp=obj_vec;
     sort(obj_vec_temp.begin(),obj_vec_temp.end(),sorting_helper1);
     vector<vector<image_map_element*>> neighbours_found;
-    /*for(int a=0;a<obj_vec_temp.size();a++)
+    for(int a=0;a<obj_vec_temp.size();a++)
     {
         if(obj_vec_temp.at(a).size()<min_size_of_obj)
         {
             neighbours_found.clear();
             find_neighbouring_objs(&obj_vec_temp.at(a),&obj_vec_temp,&neighbours_found);
+            cout<<"\n\nresults=\n\n";
+            for(int a=0;a<neighbours_found.size();a++)
+            {
+                cout<<" obj_id="<<neighbours_found.at(a).at(0)->obj_id;
+            }
+            cout<<"\nsize="<<neighbours_found.size();
+            int gh;cin>>gh;
             //calc avg color of neighbouring obj. For only a small nearby portion of the neighbouring obj.
             //image_map_element element;
             //find_neighbouring_obj_avg_color_of_closest_area(&obj_vec_temp.at(a),&neighbours_found,&element);
@@ -446,42 +474,8 @@ void image_package_class::same_obj_combination_process()//need testing, under co
 
             //handle the loop as size change is going on 
         }
-        cout<<"\nsize="<<obj_vec_temp.at(a).size();
-    }*/
-    //for testing purpose
-    vector<image_map_element*> obj_for_test;
-    cout<<"\nsample obj=\n\n";
-    int b=0,middle=10;
-    for(int a=0;a<10;a++)
-    {
-        if(a==0||a==1||a==2)
-        {
-            for(int c=0;c<10+b;c++)
-            {
-                cout<<"("<<image_map.at(a).at(c)->row_index<<","<<image_map.at(a).at(c)->col_index<<")";
-                image_map.at(a).at(c)->obj_id=-1;
-                obj_for_test.push_back(image_map.at(a).at(c));
-            }
-            cout<<endl;
-        }
-        else
-        {
-            cout<<"("<<image_map.at(a).at(5)->row_index<<","<<image_map.at(a).at(5)->col_index<<")";
-            image_map.at(a).at(5)->obj_id=-1;
-            obj_for_test.push_back(image_map.at(a).at(5));
-
-            cout<<"("<<image_map.at(a).at(6)->row_index<<","<<image_map.at(a).at(6)->col_index<<")";
-            image_map.at(a).at(6)->obj_id=-1;
-            obj_for_test.push_back(image_map.at(a).at(6));
-
-            cout<<"("<<image_map.at(a).at(7)->row_index<<","<<image_map.at(a).at(7)->col_index<<")";
-            image_map.at(a).at(7)->obj_id=-1;
-            obj_for_test.push_back(image_map.at(a).at(7));
-            cout<<endl;
-        }
+        //cout<<"\nsize="<<obj_vec_temp.at(a).size();
     }
-    find_neighbouring_objs(&obj_for_test,&obj_vec_temp,&neighbours_found);
-    int gh;cin>>gh;
 }
 
 void image_package_class::start_data_preparation_process()

@@ -112,7 +112,6 @@ class image_package_class
         int obj_id=-1;
         bool select_status=false;
         unsigned int avg_red,avg_green,avg_blue;
-        bool border_directions[8];//if true there is a border (new obj) in the particular direction
     };
     vector<vector<image_map_element*>> image_map;//the main img map
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
