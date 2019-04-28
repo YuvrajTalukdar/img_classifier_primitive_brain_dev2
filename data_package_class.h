@@ -111,7 +111,7 @@ class image_package_class
         unsigned int row_index,col_index;
         int obj_id=-1;
         bool select_status=false;
-        unsigned int avg_red,avg_green,avg_blue;
+        int avg_red,avg_green,avg_blue;
     };
     vector<vector<image_map_element*>> image_map;//the main img map
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
@@ -151,21 +151,15 @@ class image_package_class
     void contour_finder();
 
     //similar object combination process
-    struct obj_distance
-    {
-        unsigned int obj_id1,obj_id2;
-        int red,green,blue;
-        float distance;
-    };
-    void find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,image_map_element *element);//need testing
-    bool check_if_element_is_border_element(image_map_element* element);
-    void find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results);//need testing
+    int find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec);//ok tested
+    bool check_if_element_is_border_element(image_map_element* element);//ok tested
+    void find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results,vector<image_map_element*> *border_elements_vec);//ok tested
     struct sortingclass1 
     {
         bool operator() (vector<image_map_element*> vec1,vector<image_map_element*> vec2) 
         { return (vec1.size()<vec2.size());}
     }sorting_helper1; 
-    void same_obj_combination_process();////need testing
+    void similar_obj_combination_process();//ok testing
     //object mapping proceess functions
     int avg_color_in_slice(Mat* slice,char color);//color maper function//ok tested  
     float color_distance2(image_map_element* origin_element,image_map_element* new_element);//new method for calculating color distance //tested poor result than its counterpart

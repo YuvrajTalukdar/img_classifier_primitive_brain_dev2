@@ -276,13 +276,13 @@ bool image_package_class::check_if_element_is_border_element(image_map_element* 
     return border_element;
 }
 
-void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results)//need testing for neighbouring obj findeing part only
+void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results,vector<image_map_element*> *border_element_vec)//ok tested
 {
     int new_col_index,new_row_index;
     int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
     //detect the first bordel cell by brut force
     image_map_element *border_element;
-    vector<image_map_element*> border_element_vec;
+    //vector<image_map_element*> border_element_vec;
     for(int a=0;a<obj->size();a++)
     {
         int col_index=obj->at(a)->col_index,row_index=obj->at(a)->row_index;
@@ -300,34 +300,34 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
         if(border_element_found==true)
         {   border_element=obj->at(a);break;}
     }
-    border_element_vec.push_back(border_element);
+    border_element_vec->push_back(border_element);
     
     //detect the  rest of the border elements
     int a=0;
     point1:
     int index_of_first_element_added=-1;
     bool new_element_added=false;
-    for(a;a<border_element_vec.size();a++)
+    for(a;a<border_element_vec->size();a++)
     {
         for(int b=0;b<8;b++)
         {
-            new_col_index=border_element_vec.at(a)->col_index+delta_co_ordinates[b][1];
-            new_row_index=border_element_vec.at(a)->row_index+delta_co_ordinates[b][0];
+            new_col_index=border_element_vec->at(a)->col_index+delta_co_ordinates[b][1];
+            new_row_index=border_element_vec->at(a)->row_index+delta_co_ordinates[b][0];
             if(new_col_index>=0 && new_row_index>=0 && 
                new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() && 
                check_if_element_is_border_element(image_map.at(new_row_index).at(new_col_index))==true &&
-               image_map.at(new_row_index).at(new_col_index)->obj_id==border_element_vec.at(a)->obj_id)
+               image_map.at(new_row_index).at(new_col_index)->obj_id==border_element_vec->at(a)->obj_id)
             {
                 bool found=false;
-                for(int c=0;c<border_element_vec.size();c++)
+                for(int c=0;c<border_element_vec->size();c++)
                 {
-                    if(border_element_vec.at(c)->row_index==image_map.at(new_row_index).at(new_col_index)->row_index &&
-                       border_element_vec.at(c)->col_index==image_map.at(new_row_index).at(new_col_index)->col_index)
+                    if(border_element_vec->at(c)->row_index==image_map.at(new_row_index).at(new_col_index)->row_index &&
+                       border_element_vec->at(c)->col_index==image_map.at(new_row_index).at(new_col_index)->col_index)
                     {   found=true;break;}
                 }
                 if(found==false)
                 {   
-                    border_element_vec.push_back(image_map.at(new_row_index).at(new_col_index));new_element_added=true;
+                    border_element_vec->push_back(image_map.at(new_row_index).at(new_col_index));new_element_added=true;
                     if(index_of_first_element_added!=-1)
                     {   index_of_first_element_added=a;}
                 }
@@ -341,16 +341,15 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
     }
     
     //detection of the neighbouring objects
-    for(a=0;a<border_element_vec.size();a++)
+    for(a=0;a<border_element_vec->size();a++)
     {
         for(int b=0;b<8;b++)
         {
-            new_col_index=border_element_vec.at(a)->col_index+delta_co_ordinates[b][1];
-            new_row_index=border_element_vec.at(a)->row_index+delta_co_ordinates[b][0];
-            //cout<<"\nrow="<<new_row_index<<" col="<<new_col_index;
+            new_col_index=border_element_vec->at(a)->col_index+delta_co_ordinates[b][1];
+            new_row_index=border_element_vec->at(a)->row_index+delta_co_ordinates[b][0];
             if(new_col_index>=0 && new_row_index>=0 &&
                new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() &&
-               border_element_vec.at(a)->obj_id!=image_map.at(new_row_index).at(new_col_index)->obj_id
+               border_element_vec->at(a)->obj_id!=image_map.at(new_row_index).at(new_col_index)->obj_id
                )
             {
                 bool found=false;
@@ -372,110 +371,143 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
     }
 }
 
-void image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,image_map_element *element)//need testing
+int image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec)//ok tested
 {
-    int required_no_of_sq_for_finding_avg=no_of_sq_areas_need_to_be_checked_for_avg_color;
-    vector<float> distance1;
-    vector<obj_distance> neighbouring_obj_cell_and_current_obj_distance_vec;
-    struct sortingclass_for_neighbouring_obj_cell_and_current_obj_distance_vec
+    int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
+    struct data_structure
     {
-        bool operator() (obj_distance obj1,obj_distance obj2) 
-        { return (obj1.distance<obj2.distance);}
-    }sorting_helper2;
-    vector<image_map_element*> obj_info;
+        int object_id;
+        int obj_element_row_index,obj_element_col_index;
+        image_map_element* neighbouring_obj_element;
+        vector<image_map_element*> current_obj_common_border_element;
+    };
+    vector<vector<float>> id_and_closeness_vec;
+    vector<data_structure> data_structure_vec;
+    vector<image_map_element*> neighbour_obj_elements;//for temporary storage 
+    vector<image_map_element*> border_elements;//for temporary storage
     for(int a=0;a<list_of_neighbouring_objs->size();a++)
-    {
-        if(list_of_neighbouring_objs->at(a).size()<no_of_sq_areas_need_to_be_checked_for_avg_color)//some bug may be here
-        {   required_no_of_sq_for_finding_avg=list_of_neighbouring_objs->at(a).size();}
-        int nearest_distance=-1;
-        //this finds the nearest possible distance between a cell of the neighbouring objand the current obj. 
-        neighbouring_obj_cell_and_current_obj_distance_vec.clear();
-        for(int b=0;b<list_of_neighbouring_objs->at(a).size();b++)
+    {  
+        border_elements.clear();
+        neighbour_obj_elements.clear();
+        border_elements.clear();
+        data_structure_vec.clear();
+        //collect all the possible data
+        for(int b=0;b<border_element_vec->size();b++)
         {
-            distance1.clear();
-            for(int c=0;c<obj->size();c++)
-            {   distance1.push_back(sqrt(pow((list_of_neighbouring_objs->at(a).at(b)->row_index-obj->at(c)->row_index),2)+pow((list_of_neighbouring_objs->at(a).at(b)->row_index-obj->at(c)->row_index),2)));}
-            sort(distance1.begin(),distance1.end());          
-            obj_distance obj1;
-            obj1.distance=distance1.at(0);
-            obj1.obj_id1=obj->at(0)->obj_id;
-            obj1.obj_id2=list_of_neighbouring_objs->at(a).at(b)->obj_id;//b can be 0 too
-            obj1.red=list_of_neighbouring_objs->at(a).at(b)->avg_red;
-            obj1.green=list_of_neighbouring_objs->at(a).at(b)->avg_green;
-            obj1.blue=list_of_neighbouring_objs->at(a).at(b)->avg_blue;
-            neighbouring_obj_cell_and_current_obj_distance_vec.push_back(obj1);
+            for(int c=0;c<8;c++)
+            {
+                int new_col_index=border_element_vec->at(b)->col_index+delta_co_ordinates[c][1];
+                int new_row_index=border_element_vec->at(b)->row_index+delta_co_ordinates[c][0];
+                if(new_col_index>=0 && new_row_index>=0 &&
+                   new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() &&
+                   image_map.at(new_row_index).at(new_col_index)->obj_id==list_of_neighbouring_objs->at(a).at(0)->obj_id
+                )
+                {
+                    border_elements.push_back(border_element_vec->at(b));
+                    neighbour_obj_elements.push_back(image_map.at(new_row_index).at(new_col_index));
+                }
+            }
         }
-        sort(neighbouring_obj_cell_and_current_obj_distance_vec.begin(),neighbouring_obj_cell_and_current_obj_distance_vec.end(),sorting_helper2);
-        //calculating the avg color for required_no_of_sq_for_finding_avg of neighbouring_obj
-        image_map_element *element1=new image_map_element(); 
-        element1->obj_id=list_of_neighbouring_objs->at(a).at(0)->obj_id;
-        for(int b=0;b<required_no_of_sq_for_finding_avg;b++)
+        //standardize the data
+        for(int b=0;b<neighbour_obj_elements.size();b++)
         {
-            element1->avg_blue+=neighbouring_obj_cell_and_current_obj_distance_vec.at(b).blue;
-            element1->avg_green+=neighbouring_obj_cell_and_current_obj_distance_vec.at(b).green;
-            element1->avg_blue+=neighbouring_obj_cell_and_current_obj_distance_vec.at(b).blue;
+            bool found=false;
+            for(int c=0;c<data_structure_vec.size();c++)
+            {
+                if(data_structure_vec.at(c).object_id==neighbour_obj_elements.at(b)->obj_id)
+                {
+                    data_structure_vec.at(c).current_obj_common_border_element.push_back(border_elements.at(b));
+                    found=true;
+                }
+            }
+            if(found==false)
+            {
+                data_structure data_structure_obj;
+                data_structure_obj.object_id=neighbour_obj_elements.at(b)->obj_id;
+                data_structure_obj.obj_element_col_index=neighbour_obj_elements.at(b)->col_index;
+                data_structure_obj.obj_element_row_index=neighbour_obj_elements.at(b)->row_index;
+                data_structure_obj.neighbouring_obj_element=neighbour_obj_elements.at(b);
+                data_structure_obj.current_obj_common_border_element.push_back(border_elements.at(b));
+                data_structure_vec.push_back(data_structure_obj);
+            }
         }
-        element1->avg_blue/required_no_of_sq_for_finding_avg;
-        element1->avg_green/required_no_of_sq_for_finding_avg;
-        element1->avg_red/required_no_of_sq_for_finding_avg;
-        obj_info.push_back(element1);
+        //distance_calculation section
+        vector<float> id_and_closeness;//id,closeness
+        id_and_closeness.push_back(data_structure_vec.at(0).object_id);
+        float closeness=0;
+        int total=0;
+        for(int b=0;b<data_structure_vec.size();b++)
+        {
+            for(int c=0;c<data_structure_vec.at(b).current_obj_common_border_element.size();c++)
+            {
+                float red=image_map.at(data_structure_vec.at(b).obj_element_row_index).at(data_structure_vec.at(b).obj_element_col_index)->avg_red-data_structure_vec.at(b).current_obj_common_border_element.at(c)->avg_red;
+                float green=image_map.at(data_structure_vec.at(b).obj_element_row_index).at(data_structure_vec.at(b).obj_element_col_index)->avg_green-data_structure_vec.at(b).current_obj_common_border_element.at(c)->avg_green;
+                float blue=image_map.at(data_structure_vec.at(b).obj_element_row_index).at(data_structure_vec.at(b).obj_element_col_index)->avg_blue-data_structure_vec.at(b).current_obj_common_border_element.at(c)->avg_blue;
+                closeness+=sqrt(pow((red),2)+pow((green),2)+pow((blue),2));
+                total++;
+            }
+        }
+        id_and_closeness.push_back((closeness)/((float)(total)));
+        id_and_closeness_vec.push_back(id_and_closeness);
     }
-    neighbouring_obj_cell_and_current_obj_distance_vec.clear();
-    //checking which obj is most appropriate to be included in the current obj
-        //get the avg color of the current obj
-    image_map_element *element2=new image_map_element();
-    element2->obj_id=obj->at(0)->obj_id;
-    for(int a=0;a<obj->size();a++)
+    struct sortingclass2 
     {
-        element2->avg_red+=obj->at(a)->avg_red;
-        element2->avg_green+=obj->at(a)->avg_green;
-        element2->avg_blue+=obj->at(a)->avg_blue;
-    }
-    element2->avg_red/obj->size();
-    element2->avg_green/obj->size();
-    element2->avg_blue/obj->size();
-    for(int a=0;a<obj_info.size();a++)
+        bool operator() (vector<float> vec1,vector<float> vec2) 
+        { return (vec1.at(1)<vec2.at(1));}
+    }sorting_helper2;
+    sort(id_and_closeness_vec.begin(),id_and_closeness_vec.end(),sorting_helper2);
+    /*cout<<"\nresults1=\n";
+    for(int a=0;a<id_and_closeness_vec.size();a++)
     {
-        obj_distance obj1;
-        obj1.obj_id1=obj->at(0)->obj_id;
-        obj1.obj_id2=obj_info.at(a)->obj_id;
-        obj1.distance=sqrt(pow((obj_info.at(a)->avg_red-element2->avg_red),2)+pow((obj_info.at(a)->avg_green-element2->avg_green),2)+pow((obj_info.at(a)->avg_blue-element2->avg_blue),2));
-        neighbouring_obj_cell_and_current_obj_distance_vec.push_back(obj1);
-    }
-    sort(neighbouring_obj_cell_and_current_obj_distance_vec.begin(),neighbouring_obj_cell_and_current_obj_distance_vec.end(),sorting_helper2);
-    element->obj_id=neighbouring_obj_cell_and_current_obj_distance_vec.at(0).obj_id2;
-    //needs detailed testing and efficiency needs to be improved
+        cout<<"\nelement_id="<<id_and_closeness_vec.at(a).at(0)<<" closeness="<<id_and_closeness_vec.at(a).at(1);
+    }*/
+    return id_and_closeness_vec.at(0).at(0);
 }
 
-void image_package_class::same_obj_combination_process()//need testing, under construction
+void image_package_class::similar_obj_combination_process()//ok tested
 {
     vector<vector<image_map_element*>> obj_vec_temp;
     obj_vec_temp=obj_vec;
     sort(obj_vec_temp.begin(),obj_vec_temp.end(),sorting_helper1);
     vector<vector<image_map_element*>> neighbours_found;
+    vector<image_map_element*> border_element_vec;
     for(int a=0;a<obj_vec_temp.size();a++)
     {
         if(obj_vec_temp.at(a).size()<min_size_of_obj)
         {
             neighbours_found.clear();
-            find_neighbouring_objs(&obj_vec_temp.at(a),&obj_vec_temp,&neighbours_found);
-            cout<<"\n\nresults=\n\n";
+            border_element_vec.clear();
+            //find the neighbouring obj and the border elements of te current obj
+            find_neighbouring_objs(&obj_vec_temp.at(a),&obj_vec_temp,&neighbours_found,&border_element_vec);
+            //find the id og the obj which is the cloesest in terms of color to the current obj
+            int id_for_obj_to_combine_with=find_neighbouring_obj_avg_color_of_closest_area(&obj_vec_temp.at(a),&neighbours_found,&border_element_vec);
+            //add the obj to its required neighbour
+            int index_of_the_obj_to_combine_with;
+            for(int b=0;b<obj_vec_temp.size();b++)
+            {
+                if(obj_vec_temp.at(b).at(0)->obj_id==id_for_obj_to_combine_with)
+                {   index_of_the_obj_to_combine_with=b;break;}
+            }
+            for(int b=0;b<obj_vec_temp.at(a).size();b++)
+            {
+                obj_vec_temp.at(a).at(b)->obj_id=id_for_obj_to_combine_with;
+                obj_vec_temp.at(index_of_the_obj_to_combine_with).push_back(obj_vec_temp.at(a).at(b));
+            }
+            //remove the obj
+            obj_vec_temp.erase(obj_vec_temp.begin()+a);
+            //handle the loop as size change is going on 
+            a--;
+            /*cout<<"\n\nresults=\n\n";
             for(int a=0;a<neighbours_found.size();a++)
             {
                 cout<<" obj_id="<<neighbours_found.at(a).at(0)->obj_id;
             }
             cout<<"\nsize="<<neighbours_found.size();
             int gh;cin>>gh;
-            //calc avg color of neighbouring obj. For only a small nearby portion of the neighbouring obj.
-            //image_map_element element;
-            //find_neighbouring_obj_avg_color_of_closest_area(&obj_vec_temp.at(a),&neighbours_found,&element);
-            //add the obj to its required neighbour
-            //remove the obj
-
-            //handle the loop as size change is going on 
+            */
         }
-        //cout<<"\nsize="<<obj_vec_temp.at(a).size();
     }
+    obj_vec=obj_vec_temp;
 }
 
 void image_package_class::start_data_preparation_process()
@@ -486,7 +518,7 @@ void image_package_class::start_data_preparation_process()
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
         create_color_maps();
-        same_obj_combination_process();
+        similar_obj_combination_process();
 
         contour_finder();
         border_info_extractor();
@@ -494,6 +526,8 @@ void image_package_class::start_data_preparation_process()
         orig_image_temp->release();
 
         save_current_img_data();
+        //cout<<"\ndone!!!!";
+        //int gh;cin>>gh;
     }
 }
 

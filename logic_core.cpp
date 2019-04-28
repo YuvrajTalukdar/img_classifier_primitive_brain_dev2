@@ -159,7 +159,7 @@ void logic_core::train_segment(vector<core_class> &core_vec)
         img_data_preparation_process_handler* obj1=new img_data_preparation_process_handler();
         obj1->color_sensitivity=10;
         obj1->no_of_sq_areas_need_to_be_checked_for_avg_color=5;//value for testing
-        obj1->min_size_of_obj=10;
+        obj1->min_size_of_obj=40;
         obj1->slice_col=5;
         obj1->slice_row=5;
         obj1->obj=image_package_vec[a];
