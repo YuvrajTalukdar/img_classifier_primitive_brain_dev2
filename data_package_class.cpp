@@ -464,7 +464,7 @@ int image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<
     return id_and_closeness_vec.at(0).at(0);
 }
 
-void image_package_class::similar_obj_combination_process()//ok tested
+void image_package_class::similar_obj_combination_process_strict()//ok tested
 {
     vector<vector<image_map_element*>> obj_vec_temp;
     obj_vec_temp=obj_vec;
@@ -497,17 +497,167 @@ void image_package_class::similar_obj_combination_process()//ok tested
             obj_vec_temp.erase(obj_vec_temp.begin()+a);
             //handle the loop as size change is going on 
             a--;
-            /*cout<<"\n\nresults=\n\n";
-            for(int a=0;a<neighbours_found.size();a++)
-            {
-                cout<<" obj_id="<<neighbours_found.at(a).at(0)->obj_id;
-            }
-            cout<<"\nsize="<<neighbours_found.size();
-            int gh;cin>>gh;
-            */
         }
     }
     obj_vec=obj_vec_temp;
+}
+
+void image_package_class::obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs)
+{
+    //find its neighbours
+    list_of_neighbouring_objs->clear();
+    vector<image_map_element*> border_element_vec;
+    border_element_vec.clear();
+    find_neighbouring_objs(&obj_vec.at(a),&obj_vec,list_of_neighbouring_objs,&border_element_vec);
+    //calc the color distance
+    for(int b=0;b<list_of_neighbouring_objs->size();b++)
+    {
+        for(int c=0;c<obj_info_vec->size();c++)
+        {
+            if(obj_info_vec->at(c).obj_id==list_of_neighbouring_objs->at(b).at(0)->obj_id &&
+                obj_info_vec->at(c).select_status==false)
+            {
+                int n_red=obj_info_vec->at(c).avg_red;
+                int n_green=obj_info_vec->at(c).avg_green;
+                int n_blue=obj_info_vec->at(c).avg_blue;
+                float color_distance_temp=(sqrt(pow((n_red-obj_info_vec->at(a).avg_red),2)+pow((n_green-obj_info_vec->at(a).avg_green),2)+pow((n_blue-obj_info_vec->at(a).avg_blue),2)));
+                if(color_distance_temp<=color_sensitivity2)
+                {   obj_info_vec->at(a).color_distance_of_each_obj.push_back(color_distance_temp);}
+                else
+                {
+                    list_of_neighbouring_objs->erase(list_of_neighbouring_objs->begin()+b);
+                    b--;
+                }
+                break;
+            }
+            else if(obj_info_vec->at(c).obj_id==list_of_neighbouring_objs->at(b).at(0)->obj_id &&
+                    obj_info_vec->at(c).select_status==true)
+            {
+                list_of_neighbouring_objs->erase(list_of_neighbouring_objs->begin()+b);
+                b--;
+                break;
+            }
+        }
+    }
+}
+
+void image_package_class::similar_obj_combinarion_process_un_strict()//testing needed
+{
+    //data gathering and storage
+    vector<obj_info> obj_info_vec;
+    for(int a=0;a<obj_vec.size();a++)
+    {
+        obj_info obj1;
+        //calc avg rgb values for each obj
+        obj1.obj_id=obj_vec.at(a).at(0)->obj_id;
+        int red=0,green=0,blue=0;
+        int b=0;
+        for(b=0;b<obj_vec.at(a).size();b++)
+        {
+            red+=obj_vec.at(a).at(b)->avg_red;
+            green+=obj_vec.at(a).at(b)->avg_green;
+            blue+=obj_vec.at(a).at(b)->avg_blue;
+        }
+        obj1.avg_green=green/b;
+        obj1.avg_red=red/b;
+        obj1.avg_blue=blue/b;
+        obj_info_vec.push_back(obj1);
+    }
+   
+    //combination process bases on the smallest distance and color sensitivity value
+    //algorithm is similar to the color mapper
+    vector<vector<image_map_element*>> new_obj_vec;//this  is the new obj vec, which will replace the old one
+    new_obj_vec.clear();
+    int obj_index=0;
+    for(int a=0;a<obj_info_vec.size();a++)
+    {
+        if(obj_info_vec.at(a).select_status==false)
+        {
+            vector<vector<image_map_element*>> list_of_neighbouring_objs;//for holding the current neighbouring obj list
+            vector<vector<image_map_element*>> list_of_neighbouring_objs_buffer;//for holding the extra neighboring obj list
+            list_of_neighbouring_objs_buffer.clear();
+            vector<vector<image_map_element*>> list_of_obj_to_be_combined;//for holding the list of objects to be combined into one single object
+            list_of_obj_to_be_combined.clear();
+            //for the first obj
+            obj_info_vec.at(a).select_status=true;           
+            obj_info_vec.at(a).obj_id=obj_index;
+            for(int b=0;b<obj_vec.at(a).size();b++)
+            {   obj_vec.at(a).at(b)->obj_id=obj_index;}
+            list_of_obj_to_be_combined.push_back(obj_vec.at(a));
+            //for the rest of the objs
+            obj_info_gatherer(a,&obj_info_vec,&list_of_neighbouring_objs);
+            point1:
+            if(list_of_neighbouring_objs_buffer.size()!=0)
+            {
+                int index1;
+                for(int b=0;b<obj_info_vec.size();b++)
+                {
+                    if(obj_info_vec.at(b).obj_id==list_of_neighbouring_objs_buffer.at(0).at(0)->obj_id && obj_info_vec.at(b).select_status==false)
+                    {
+                        index1=b;
+                        break;
+                    }
+                }
+                obj_info_vec.at(index1).select_status=true;
+                obj_info_vec.at(index1).obj_id=obj_index;
+                for(int b=0;b<obj_vec.at(index1).size();b++)
+                {   obj_vec.at(index1).at(b)->obj_id=obj_index;}
+                list_of_neighbouring_objs.clear();
+                obj_info_gatherer(index1,&obj_info_vec,&list_of_neighbouring_objs);
+            }
+            while(list_of_neighbouring_objs.size()>0)
+            {
+                int index_of_new_obj;
+                for(int b=0;b<obj_info_vec.size();b++)
+                {
+                    if(obj_info_vec.at(b).obj_id==list_of_neighbouring_objs.at(0).at(0)->obj_id && obj_info_vec.at(b).select_status==false)
+                    {
+                        obj_info_vec.at(b).obj_id=obj_index;
+                        obj_info_vec.at(b).select_status=true;
+                        index_of_new_obj=b;
+                        break;
+                    }
+                }
+                for(int b=0;b<list_of_neighbouring_objs.at(0).size();b++)
+                {   list_of_neighbouring_objs.at(0).at(b)->obj_id=obj_index;}
+                list_of_obj_to_be_combined.push_back(list_of_neighbouring_objs.at(0));
+                //before clearing other list_of_neighbouring_objs need to be handled
+                if(list_of_neighbouring_objs.size()>1)
+                {
+                    int b=list_of_neighbouring_objs.size()-1;
+                    for(b;b>=2;b--)
+                    {   list_of_neighbouring_objs_buffer.push_back(list_of_neighbouring_objs.at(b));}
+                }
+                list_of_neighbouring_objs.clear(); 
+                obj_info_gatherer(index_of_new_obj,&obj_info_vec,&list_of_neighbouring_objs);
+            }
+            //remove already included objs
+            for(int b=0;b<list_of_neighbouring_objs_buffer.size();b++)
+            {
+                for(int c=0;c<obj_info_vec.size();c++)
+                {
+                    if(obj_info_vec.at(c).obj_id==list_of_neighbouring_objs_buffer.at(b).at(0)->obj_id && obj_info_vec.at(c).select_status==true)
+                    {
+                        list_of_neighbouring_objs_buffer.erase(list_of_neighbouring_objs_buffer.begin()+b);
+                        b--;
+                        break;
+                    }
+                }
+            }
+            if(list_of_neighbouring_objs_buffer.size()!=0)
+            {   goto point1;}
+            obj_index++;
+            //actual combination part
+            vector<image_map_element*> new_obj;
+            for(int b=0;b<list_of_obj_to_be_combined.size();b++)
+            {
+                for(int c=0;c<list_of_obj_to_be_combined.at(b).size();c++)
+                {   new_obj.push_back(list_of_obj_to_be_combined.at(b).at(c));}
+            }
+            new_obj_vec.push_back(new_obj);
+        }
+    }
+    obj_vec=new_obj_vec;
 }
 
 void image_package_class::start_data_preparation_process()
@@ -518,7 +668,8 @@ void image_package_class::start_data_preparation_process()
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
         create_color_maps();
-        similar_obj_combination_process();
+        similar_obj_combination_process_strict();
+        similar_obj_combinarion_process_un_strict();
 
         contour_finder();
         border_info_extractor();

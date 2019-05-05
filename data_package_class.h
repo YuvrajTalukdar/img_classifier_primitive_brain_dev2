@@ -102,6 +102,7 @@ class image_package_class
     bool lock_enabled=false;
     //critial variables used in data preparation process
     float color_sensitiviy;
+    float color_sensitivity2=30;
     float percentage_of_close_pixels;//used with color_distance2 function
     int no_of_sq_areas_need_to_be_checked_for_avg_color=1;//used by the similar_obj_combining_process. To be exact by this function find_neighbouring_obj_avg_color_of_closest_area
     unsigned int slice_row_size,slice_col_size,min_size_of_obj=0;//min_size_fo_obj used for testing using plot_obj_maps function.
@@ -149,8 +150,18 @@ class image_package_class
     void border_info_extractor();
 
     void contour_finder();
-
-    //similar object combination process
+    struct obj_info
+    {   
+        int avg_red,avg_green,avg_blue,obj_id;
+        vector<float> color_distance_of_each_obj;
+        int index_of_the_smallest_distance,obj_id_with_smallest_distance;
+        float smallest_distance;
+        bool select_status=false;
+    };
+    void obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs);
+    //similar obj combination process un-strict
+    void similar_obj_combinarion_process_un_strict();//under construction
+    //similar object combination process strict
     int find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec);//ok tested
     bool check_if_element_is_border_element(image_map_element* element);//ok tested
     void find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results,vector<image_map_element*> *border_elements_vec);//ok tested
@@ -159,7 +170,7 @@ class image_package_class
         bool operator() (vector<image_map_element*> vec1,vector<image_map_element*> vec2) 
         { return (vec1.size()<vec2.size());}
     }sorting_helper1; 
-    void similar_obj_combination_process();//ok testing
+    void similar_obj_combination_process_strict();//ok testing
     //object mapping proceess functions
     int avg_color_in_slice(Mat* slice,char color);//color maper function//ok tested  
     float color_distance2(image_map_element* origin_element,image_map_element* new_element);//new method for calculating color distance //tested poor result than its counterpart
