@@ -216,9 +216,8 @@ void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_
     for(int a=0;a<obj_vec_for_one_img->size();a++)
     {
         int rand_red=rand()%255+0,rand_green=rand()%255+0,rand_blue=rand()%255+0;
-        if(obj_vec_for_one_img->at(a).size()>min_size_of_obj)
-        {
-            //cout<<"\na="<<obj_vec.at(a).size();
+        //if(obj_vec_for_one_img->at(a).size()>=min_size_of_obj)//looks like this checker is not required
+        //{
             total_no_of_elements_calc+=obj_vec_for_one_img->at(a).size();
             for(int b=0;b<obj_vec_for_one_img->at(a).size();b++)
             {  
@@ -233,7 +232,7 @@ void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_
                     }
                 }
             }
-        }
+        //}
     }
     //cout<<"\ntotal_no_of_elements="<<obj_vec_for_one_img->size()*obj_vec_for_one_img->at(0).size();
     cout<<"\ntotal_no_of_elements_calc="<<total_no_of_elements_calc;
@@ -564,7 +563,7 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//testing n
         obj_info_vec.push_back(obj1);
     }
    
-    //combination process bases on the smallest distance and color sensitivity value
+    //combination process based on the smallest distance and color sensitivity value
     //algorithm is similar to the color mapper
     vector<vector<image_map_element*>> new_obj_vec;//this  is the new obj vec, which will replace the old one
     new_obj_vec.clear();
@@ -602,13 +601,14 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//testing n
                 obj_info_vec.at(index1).obj_id=obj_index;
                 for(int b=0;b<obj_vec.at(index1).size();b++)
                 {   obj_vec.at(index1).at(b)->obj_id=obj_index;}
+                list_of_obj_to_be_combined.push_back(obj_vec.at(index1));
                 list_of_neighbouring_objs.clear();
                 obj_info_gatherer(index1,&obj_info_vec,&list_of_neighbouring_objs);
             }
             while(list_of_neighbouring_objs.size()>0)
             {
                 int index_of_new_obj;
-                for(int b=0;b<obj_info_vec.size();b++)
+                for(int b=0;b<obj_info_vec.size();b++)//for checking if the first neighbouring obj is selected or not. 
                 {
                     if(obj_info_vec.at(b).obj_id==list_of_neighbouring_objs.at(0).at(0)->obj_id && obj_info_vec.at(b).select_status==false)
                     {
@@ -621,11 +621,11 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//testing n
                 for(int b=0;b<list_of_neighbouring_objs.at(0).size();b++)
                 {   list_of_neighbouring_objs.at(0).at(b)->obj_id=obj_index;}
                 list_of_obj_to_be_combined.push_back(list_of_neighbouring_objs.at(0));
-                //before clearing other list_of_neighbouring_objs need to be handled
+                //before clearing, other list_of_neighbouring_objs need to be handled
                 if(list_of_neighbouring_objs.size()>1)
                 {
                     int b=list_of_neighbouring_objs.size()-1;
-                    for(b;b>=2;b--)
+                    for(b;b>=1;b--)//2
                     {   list_of_neighbouring_objs_buffer.push_back(list_of_neighbouring_objs.at(b));}
                 }
                 list_of_neighbouring_objs.clear(); 
@@ -668,8 +668,8 @@ void image_package_class::start_data_preparation_process()
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
         create_color_maps();
-        similar_obj_combination_process_strict();
-        similar_obj_combinarion_process_un_strict();
+        similar_obj_combination_process_strict();//no data leakage till here
+        similar_obj_combinarion_process_un_strict();//leakage present here
 
         contour_finder();
         border_info_extractor();

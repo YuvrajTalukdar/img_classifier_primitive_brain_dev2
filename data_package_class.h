@@ -160,7 +160,7 @@ class image_package_class
     };
     void obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs);
     //similar obj combination process un-strict
-    void similar_obj_combinarion_process_un_strict();//under construction
+    void similar_obj_combinarion_process_un_strict();//need testing
     //similar object combination process strict
     int find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec);//ok tested
     bool check_if_element_is_border_element(image_map_element* element);//ok tested
