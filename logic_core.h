@@ -18,6 +18,7 @@ class img_data_preparation_process_handler
 {
     public:
     float color_sensitivity;
+    float color_sensitivity2;
     float no_of_sq_areas_need_to_be_checked_for_avg_color;
     int min_size_of_obj;
     int slice_row,slice_col;

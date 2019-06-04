@@ -68,8 +68,20 @@ float image_package_class::color_distance2(image_map_element* origin_element,ima
 
 float image_package_class::color_distance(image_map_element* origin_element,image_map_element* new_element)//color maper function//ok tested
 {
-    float distance=sqrt((origin_element->avg_red-new_element->avg_red)*(origin_element->avg_red-new_element->avg_red)+(origin_element->avg_green-new_element->avg_green)*(origin_element->avg_green-new_element->avg_green)+(origin_element->avg_blue-new_element->avg_blue)*(origin_element->avg_blue-new_element->avg_blue));
-    return distance;
+    float distance=0;
+    int no_of_cells_to_check;
+    if(obj_elements_vec_ptr->size()>=5)
+    {   no_of_cells_to_check=5;}
+    else
+    {   no_of_cells_to_check=obj_elements_vec_ptr->size();}
+    for(int a=obj_elements_vec_ptr->size()-1;a>=obj_elements_vec_ptr->size()-no_of_cells_to_check;--a)
+    {
+        if(a<0)
+        {   break;}
+        distance+=sqrt(pow((obj_elements_vec_ptr->at(a)->avg_red-new_element->avg_red),2)+pow((obj_elements_vec_ptr->at(a)->avg_green-new_element->avg_green),2)+pow((obj_elements_vec_ptr->at(a)->avg_blue-new_element->avg_blue),2));
+    }
+    //float distance=sqrt((origin_element->avg_red-new_element->avg_red)*(origin_element->avg_red-new_element->avg_red)+(origin_element->avg_green-new_element->avg_green)*(origin_element->avg_green-new_element->avg_green)+(origin_element->avg_blue-new_element->avg_blue)*(origin_element->avg_blue-new_element->avg_blue));
+    return distance/no_of_cells_to_check;
 }
 
 void image_package_class::search_for_neighbour(image_map_element* element,vector<vector<int>>* result)//color maper function//ok tested
@@ -114,6 +126,25 @@ void image_package_class::remove_non_free_elements(vector<vector<int>>* result)/
 
 void image_package_class::create_color_maps()//color maper function//ok tested
 {
+    float upper_limit=938400,lower_limit=100000;
+    if(orig_image_temp->rows*orig_image_temp->cols>=upper_limit)
+    {
+        slice_row_size=5;
+        slice_col_size=5;
+    }
+    else if(orig_image_temp->rows*orig_image_temp->cols<=lower_limit)
+    {
+        slice_row_size=1;
+        slice_col_size=1;
+    }
+    else
+    {
+        float difference=upper_limit-lower_limit;
+        float percentage=((orig_image_temp->rows*orig_image_temp->cols)/(difference))*2.9;
+        slice_col_size=percentage+2;
+        slice_row_size=percentage+2;
+    }
+    cout<<"\nrow="<<slice_row_size<<" col="<<slice_col_size;
     no_of_slices_row_wise=(orig_image_temp->rows)/slice_row_size;
     no_of_slices_col_wise=(orig_image_temp->cols)/slice_col_size;
     //initializing the image map
@@ -159,6 +190,7 @@ void image_package_class::create_color_maps()//color maper function//ok tested
             vector<vector<int>> result;
             result.clear();
             vector<image_map_element*> obj_elements_vec;
+            obj_elements_vec_ptr=&obj_elements_vec;//for the color distance calculator
             obj_elements_vec.clear();
             //for entering the first element in the obj_element_vec
             image_map.at(a).at(b)->obj_id=obj_index;
@@ -197,10 +229,9 @@ void image_package_class::create_color_maps()//color maper function//ok tested
             obj_vec.push_back(obj_elements_vec);
         }
     }
-    //cout<<"\n\nok";
 }
 
-void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,string orig_img_path)//for testing create_color_maps() function//ok tested
+void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,vector<vector<image_map_element*>>* image_map1,string orig_img_path)//for testing create_color_maps() function//ok tested
 {
     cout<<"\nno_of_objects detected= "<<obj_vec_for_one_img->size();
     Mat *orig_image_temp1=new Mat();
@@ -209,6 +240,9 @@ void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_
     obj_map_plotted.create(orig_image_temp1->size(),orig_image_temp1->type());
     obj_map_plotted = Scalar::all(0);
     srand(time(NULL));//"initialize random seed:" as reported in the docs
+    slice_col_size=(orig_image_temp1->rows*orig_image_temp1->cols)/(image_map1->size()*image_map1->at(0).size());
+    slice_col_size=sqrt(slice_col_size);
+    slice_row_size=slice_col_size;
     no_of_slices_row_wise=(orig_image_temp1->rows)/slice_row_size;
     no_of_slices_col_wise=(orig_image_temp1->cols)/slice_col_size;
     
@@ -501,7 +535,7 @@ void image_package_class::similar_obj_combination_process_strict()//ok tested
     obj_vec=obj_vec_temp;
 }
 
-void image_package_class::obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs)
+void image_package_class::obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs)//ok tested
 {
     //find its neighbours
     list_of_neighbouring_objs->clear();
@@ -540,7 +574,7 @@ void image_package_class::obj_info_gatherer(int a,vector<obj_info> *obj_info_vec
     }
 }
 
-void image_package_class::similar_obj_combinarion_process_un_strict()//testing needed
+void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
 {
     //data gathering and storage
     vector<obj_info> obj_info_vec;
@@ -669,7 +703,7 @@ void image_package_class::start_data_preparation_process()
         *orig_image_temp=imread(image_paths[a]);
         create_color_maps();
         similar_obj_combination_process_strict();//no data leakage till here
-        similar_obj_combinarion_process_un_strict();//leakage present here
+        similar_obj_combinarion_process_un_strict();//leakage fixed
 
         contour_finder();
         border_info_extractor();
@@ -694,10 +728,11 @@ void image_package_class::clean_up_prepared_data_obj()
     prepared_data_obj.obj_vec_for_each_img.clear();
 }
 
-void image_package_class::enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color1,float color_sensi,int slice_row,int slice_col,int min_size_of_obj1)
+void image_package_class::enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color1,float color_sensi,float color_sensi2,int slice_row,int slice_col,int min_size_of_obj1)
 {
     min_size_of_obj=min_size_of_obj1;
     color_sensitiviy=color_sensi;
+    color_sensitivity2=color_sensi2;
     no_of_sq_areas_need_to_be_checked_for_avg_color=no_of_sq_areas_need_to_be_checked_for_avg_color1;
     slice_row_size=slice_row;
     slice_col_size=slice_col;
@@ -783,7 +818,7 @@ void image_package_class::combine_package_data(vector<image_package_class*> *ipc
     }
     //for testing
     for(int a=0;a<prepared_data_obj.obj_vec_for_each_img.size();a++)
-    {   plot_obj_maps(&prepared_data_obj.obj_vec_for_each_img.at(a),image_paths.at(a));}
+    {   plot_obj_maps(&prepared_data_obj.obj_vec_for_each_img.at(a),&prepared_data_obj.image_map_vec.at(a),image_paths.at(a));}
     //int gh;cin>>gh;
 }
 

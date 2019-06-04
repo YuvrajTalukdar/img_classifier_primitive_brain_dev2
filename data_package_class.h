@@ -102,10 +102,10 @@ class image_package_class
     bool lock_enabled=false;
     //critial variables used in data preparation process
     float color_sensitiviy;
-    float color_sensitivity2=30;
+    float color_sensitivity2;
     float percentage_of_close_pixels;//used with color_distance2 function
     int no_of_sq_areas_need_to_be_checked_for_avg_color=1;//used by the similar_obj_combining_process. To be exact by this function find_neighbouring_obj_avg_color_of_closest_area
-    unsigned int slice_row_size,slice_col_size,min_size_of_obj=0;//min_size_fo_obj used for testing using plot_obj_maps function.
+    int slice_row_size,slice_col_size,min_size_of_obj=0;//min_size_fo_obj used for testing using plot_obj_maps function.
     //prepared data structures and objs
     struct image_map_element
     {
@@ -158,7 +158,7 @@ class image_package_class
         float smallest_distance;
         bool select_status=false;
     };
-    void obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs);
+    void obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs);//ok tested
     //similar obj combination process un-strict
     void similar_obj_combinarion_process_un_strict();//need testing
     //similar object combination process strict
@@ -174,11 +174,12 @@ class image_package_class
     //object mapping proceess functions
     int avg_color_in_slice(Mat* slice,char color);//color maper function//ok tested  
     float color_distance2(image_map_element* origin_element,image_map_element* new_element);//new method for calculating color distance //tested poor result than its counterpart
+    vector<image_map_element*> *obj_elements_vec_ptr;//required for the color distance calculator
     float color_distance(image_map_element* origin_element,image_map_element* new_element);//color maper function//ok tested
     void search_for_neighbour(image_map_element* element,vector<vector<int>>* result);//color maper function//ok tested
     void remove_non_free_elements(vector<vector<int>>* result);//color maper function//ok tested
     void create_color_maps();//color maper function//ok tested
-    void plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,string orig_img_path);//for testing create_color_maps() function
+    void plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,vector<vector<image_map_element*>>* image_map1,string orig_img_path);//for testing create_color_maps() function
     //data preparation process handler function
     void start_data_preparation_process();
     void clean_up_prepared_data_obj();
@@ -189,10 +190,10 @@ class image_package_class
     void enter_image_metadata(int start_index,vector<string> *img_file_name,vector<string> *img_paths);
     void remove_image_metadata(int start_index);
     //setting up of training critical variables
-    void enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color,float color_sensi,int slice_row,int slice_col,int min_size_of_obj1);
+    void enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color,float color_sensi,float colot_sensi,int slice_row,int slice_col,int min_size_of_obj1);
     //threading functions
-    void split_package_data(vector<image_package_class*> *ipc_vec);
-    void combine_package_data(vector<image_package_class*> *ipc_vec);
+    void split_package_data(vector<image_package_class*> *ipc_vec);//ok tested
+    void combine_package_data(vector<image_package_class*> *ipc_vec);//ok tested
     //constructor
     image_package_class(int id_,string label_,string dir_path_);
     image_package_class();
