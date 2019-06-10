@@ -10,11 +10,6 @@ void image_package_class::border_info_extractor()
 
 }
 
-void image_package_class::contour_finder()
-{
-
-}
-
 int image_package_class::avg_color_in_slice(Mat* slice,char color)//color maper function//ok tested
 {
     int avg=0;
@@ -126,11 +121,11 @@ void image_package_class::remove_non_free_elements(vector<vector<int>>* result)/
 
 void image_package_class::create_color_maps()//color maper function//ok tested
 {
-    float upper_limit=938400,lower_limit=100000;
+    float upper_limit=938400,lower_limit=100000;//100000
     if(orig_image_temp->rows*orig_image_temp->cols>=upper_limit)
     {
-        slice_row_size=5;
-        slice_col_size=5;
+        slice_row_size=5;//5
+        slice_col_size=5;//5
     }
     else if(orig_image_temp->rows*orig_image_temp->cols<=lower_limit)
     {
@@ -309,13 +304,83 @@ bool image_package_class::check_if_element_is_border_element(image_map_element* 
     return border_element;
 }
 
+void image_package_class::find_obj_border_elements(vector<image_map_element*> *obj,vector<image_map_element*> *border_element_vec)//need testing 
+{
+    int new_col_index,new_row_index;
+    int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
+    //find_obj_border_elements(obj,border_element_vec);
+    //detect the first bordel cell by brut force
+    image_map_element *border_element;
+    border_element_vec->clear();
+    for(int a=0;a<obj->size();a++)
+    {
+        int col_index=obj->at(a)->col_index,row_index=obj->at(a)->row_index;
+        bool border_element_found=false;
+        for(int b=0;b<8;b++)
+        {
+            new_col_index=col_index+delta_co_ordinates[b][1];
+            new_row_index=row_index+delta_co_ordinates[b][0];
+            if(new_col_index>=0 && new_row_index>=0 && new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size())
+            {
+                if(image_map.at(new_row_index).at(new_col_index)->obj_id!=obj->at(a)->obj_id)
+                {   border_element_found=true;}
+            }
+        }
+        if(border_element_found==true)
+        {   border_element=obj->at(a);break;}
+    }
+    border_element_vec->push_back(border_element);
+    
+    //detect the  rest of the border elements
+    int a=0;bool var=false;
+    point1:
+    bool new_element_added=true;
+    while(new_element_added==true)
+    {
+        int index_of_first_element_added=-1;
+        new_element_added=false;
+        for(a;a<border_element_vec->size();a++)
+        {
+            for(int b=0;b<8;b++)
+            {
+                new_col_index=border_element_vec->at(a)->col_index+delta_co_ordinates[b][1];
+                new_row_index=border_element_vec->at(a)->row_index+delta_co_ordinates[b][0];
+                if(new_col_index>=0 && new_row_index>=0 && 
+                new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() && 
+                check_if_element_is_border_element(image_map.at(new_row_index).at(new_col_index))==true &&
+                image_map.at(new_row_index).at(new_col_index)->obj_id==border_element_vec->at(a)->obj_id)
+                {
+                    bool found=false;
+                    for(int c=0;c<border_element_vec->size();c++)
+                    {
+                        if(border_element_vec->at(c)->row_index==image_map.at(new_row_index).at(new_col_index)->row_index &&
+                        border_element_vec->at(c)->col_index==image_map.at(new_row_index).at(new_col_index)->col_index)
+                        {   found=true;break;}
+                    }
+                    if(found==false)
+                    {   
+                        border_element_vec->push_back(image_map.at(new_row_index).at(new_col_index));new_element_added=true;
+                        if(index_of_first_element_added!=-1)
+                        {   index_of_first_element_added=a;}
+                    }
+                }
+            }
+        }
+        if(new_element_added==true)
+        {   a=index_of_first_element_added;}
+    }
+}
+
 void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results,vector<image_map_element*> *border_element_vec)//ok tested
 {
     int new_col_index,new_row_index;
     int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
+    //find_obj_border_elements(obj,border_element_vec);
+    /*could have used the above function rather than writing 
+      the whole code again, but due to compiler bug the above 
+      function is not working when called from here. */
     //detect the first bordel cell by brut force
     image_map_element *border_element;
-    //vector<image_map_element*> border_element_vec;
     for(int a=0;a<obj->size();a++)
     {
         int col_index=obj->at(a)->col_index,row_index=obj->at(a)->row_index;
@@ -374,7 +439,7 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
     }
     
     //detection of the neighbouring objects
-    for(a=0;a<border_element_vec->size();a++)
+    for(int a=0;a<border_element_vec->size();a++)
     {
         for(int b=0;b<8;b++)
         {
@@ -694,6 +759,139 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
     obj_vec=new_obj_vec;
 }
 
+void image_package_class::buffer_area_finder(vector<image_map_element*> *border_elements)//need testing
+{
+    int new_row_index,new_col_index,buffer_cells_to_occupy=8;
+    int delta_co_ordinates[4][2]={{0,-1},{0,1},{-1,0},{1,0}/*,{-1,-1},{-1,1},{1,1},{1,-1}*/};
+    vector<image_map_element*> buffer_area_for_one_obj;
+    for(int a=0;a<border_elements->size();a++)
+    {
+        for(int b=0;b<4;b++)
+        {
+            new_row_index=border_elements->at(a)->row_index+delta_co_ordinates[b][0];
+            new_col_index=border_elements->at(a)->col_index+delta_co_ordinates[b][1];
+            if(new_col_index>=0 && new_row_index>=0 &&
+               new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() &&
+               image_map.at(new_row_index).at(new_col_index)->obj_id!=border_elements->at(a)->obj_id)
+            {
+                int delta,delta_delta;
+                bool col=false,row=true;
+                if(delta_co_ordinates[b][0]!=0)
+                {   delta=delta_co_ordinates[b][0];row=true;}
+                else if(delta_co_ordinates[b][1]!=0)
+                {   delta=delta_co_ordinates[b][1];col=true;}
+                delta_delta=delta;
+                for(int c=0;c<buffer_cells_to_occupy;c++)
+                {
+                    if(row==true &&
+                       border_elements->at(b)->row_index+delta>=0 && border_elements->at(b)->row_index+delta<image_map.size() &&
+                       image_map.at(border_elements->at(b)->row_index+delta).at(border_elements->at(b)->col_index)->obj_id!=border_elements->at(b)->obj_id 
+                       )
+                    {
+                        buffer_area_for_one_obj.push_back(image_map.at(border_elements->at(b)->row_index+delta).at(border_elements->at(b)->col_index));
+                    }
+                    else if(col==true && 
+                            border_elements->at(b)->col_index+delta>=0 && border_elements->at(b)->col_index+delta<image_map.at(border_elements->at(b)->row_index).size() &&
+                            image_map.at(border_elements->at(b)->row_index).at(border_elements->at(b)->col_index+delta)->obj_id!=border_elements->at(b)->obj_id
+                            )
+                    {
+                        buffer_area_for_one_obj.push_back(image_map.at(border_elements->at(b)->row_index).at(border_elements->at(b)->col_index+delta));
+                    }
+                    delta+=delta_delta;
+                }
+            }
+        }
+    }
+    obj_buffer_area.push_back(buffer_area_for_one_obj);
+}
+
+void image_package_class::contour_finder()//need testing
+{
+    //for getting the approx size of the required mat
+    for(int a=0;a<obj_vec.size();a++)
+    {   
+        //int max_row=0,max_col=0,min_row=obj_vec.at(a).at(0)->row_index,min_col=obj_vec.at(a).at(0)->col_index;
+        int max_row=0,max_col=0,min_row=border_element_vec.at(a).at(0)->row_index,min_col=border_element_vec.at(a).at(0)->col_index;
+        for(int b=0;b<border_element_vec.at(a).size();b++)
+        {
+            if(max_row<border_element_vec.at(a).at(b)->row_index)
+            {   max_row=border_element_vec.at(a).at(b)->row_index;}
+            if(max_col<border_element_vec.at(a).at(b)->col_index)
+            {   max_col=border_element_vec.at(a).at(b)->col_index;}
+            if(min_row>border_element_vec.at(a).at(b)->row_index)
+            {   min_row=border_element_vec.at(a).at(b)->row_index;}
+            if(min_col>border_element_vec.at(a).at(b)->col_index)
+            {   min_col=border_element_vec.at(a).at(b)->col_index;}
+        }
+        for(int b=0;b<obj_buffer_area.at(a).size();b++)
+        {
+            if(max_row<obj_buffer_area.at(a).at(b)->row_index)
+            {   max_row=obj_buffer_area.at(a).at(b)->row_index;}
+            if(max_col<obj_buffer_area.at(a).at(b)->col_index)
+            {   max_col=obj_buffer_area.at(a).at(b)->col_index;}
+            if(min_row>obj_buffer_area.at(a).at(b)->row_index)
+            {   min_row=obj_buffer_area.at(a).at(b)->row_index;}
+            if(min_col>obj_buffer_area.at(a).at(b)->col_index)
+            {   min_col=obj_buffer_area.at(a).at(b)->col_index;}
+        }
+        int orig_min_row=min_row*slice_row_size,orig_min_col=min_col*slice_col_size;
+        int orig_max_row=max_row*slice_row_size,orig_max_col=max_col*slice_col_size;
+        Mat* slice=new Mat();
+        cout<<"\n\nc_row="<<canny_edge_temp->rows<<" c_col="<<canny_edge_temp->cols;
+        cout<<" \nomi_row"<<orig_min_col<<" omi_col="<<orig_min_col<<" oma_row="<<orig_max_row<<" oma_col="<<orig_max_col<<" b="<<a;
+        Mat ROI(*canny_edge_temp,Rect(orig_min_col,orig_min_row,(orig_max_col-orig_min_col),(orig_max_row-orig_min_row)));
+        ROI.copyTo(*slice);
+        vector<vector<Point>> contours;
+        vector<Vec4i> heirachy;
+        contours.clear();
+        heirachy.clear();
+        cv::findContours(*slice,contours,heirachy,CV_RETR_TREE,CV_CHAIN_APPROX_SIMPLE,Point(0,0));
+        contours_vec.push_back(contours);
+        heirachy_vec.push_back(heirachy);
+        /*Mat contour_dis=Mat::zeros(slice->size(),CV_8UC3);
+        for(int b=0;b<contours.size();b++)
+        {
+            drawContours(contour_dis,contours,b,Scalar(255,255,255),1,8,heirachy,0,Point());
+        }*/
+        //int ghf;cin>>ghf;
+        //imshow("slice",*slice);
+        //waitKey(0);
+        //imshow("contour",contour_dis);
+        //waitKey(0);
+        //int gh;cin>>gh;
+        //contour_dis.release();
+        slice->release();
+    }
+}
+
+void image_package_class::border_finder()//need testing
+{   
+    //border elements collection and buffer area creator
+    vector<image_map_element*> border_elements;
+    obj_buffer_area.clear();
+    for(int a=0;a<obj_vec.size();a++)
+    {
+        find_obj_border_elements(&obj_vec.at(a),&border_elements);
+        buffer_area_finder(&border_elements);
+        border_element_vec.push_back(border_elements);
+    }
+    //canny edge detector
+    canny_edge_temp=new Mat(orig_image_temp->cols,orig_image_temp->rows,CV_8UC3,Scalar(0,0,0));
+    Mat orig_img_gray;
+    cvtColor(*orig_image_temp,orig_img_gray,CV_BGR2GRAY);
+    blur(orig_img_gray,*canny_edge_temp,Size(kernel_size,kernel_size));
+    Canny(*canny_edge_temp,*canny_edge_temp,lowThreshold,lowThreshold*ratio,kernel_size);
+    //for contour funder
+    heirachy_vec.clear();
+    contours_vec.clear();
+    contour_finder();
+        //contour finder
+        //final border finder
+    
+    canny_edge_temp->release();
+    //cout<<"\n\n\n\nobj_vec="<<obj_vec.size()<<" buffer="<<obj_buffer_area.size();int gh;cin>>gh;
+}
+
 void image_package_class::start_data_preparation_process()
 {
     clean_up_prepared_data_obj();
@@ -701,12 +899,15 @@ void image_package_class::start_data_preparation_process()
     {
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
+        //data preparation step 1
         create_color_maps();
         similar_obj_combination_process_strict();//no data leakage till here
         similar_obj_combinarion_process_un_strict();//leakage fixed
-
-        contour_finder();
+        //data preparation step 2
+        border_finder();
+        //data preparation step 3
         border_info_extractor();
+        //data preparation step 4
         data_arranger();
         orig_image_temp->release();
 
@@ -728,14 +929,12 @@ void image_package_class::clean_up_prepared_data_obj()
     prepared_data_obj.obj_vec_for_each_img.clear();
 }
 
-void image_package_class::enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color1,float color_sensi,float color_sensi2,int slice_row,int slice_col,int min_size_of_obj1)
+void image_package_class::enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color1,float color_sensi,float color_sensi2,int min_size_of_obj1)
 {
     min_size_of_obj=min_size_of_obj1;
     color_sensitiviy=color_sensi;
     color_sensitivity2=color_sensi2;
     no_of_sq_areas_need_to_be_checked_for_avg_color=no_of_sq_areas_need_to_be_checked_for_avg_color1;
-    slice_row_size=slice_row;
-    slice_col_size=slice_col;
 }
 
 void image_package_class::enter_image_metadata(string img_name,string img_path)
@@ -800,7 +999,6 @@ void image_package_class::split_package_data(vector<image_package_class*> *ipc_v
 
 void image_package_class::combine_package_data(vector<image_package_class*> *ipc_vec)
 {
-    cout<<"\nchecking part (temporary)";
     //combination part
     for(int a=0;a<ipc_vec->size();a++)
     {

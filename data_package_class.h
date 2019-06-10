@@ -86,13 +86,11 @@ class image_package_class
     private:
     //canny edge slicer operations data
         //threshold
-    int lowThreshold=20;//30
-    int const max_lowThreshold = 100;
-    float base_line=0.05;
+    //float base_line=0.05;
     //other operation data
-    vector<Mat*> mat_vec;
-    vector<image_pixel_data*> full_image_pixel_vec;
-    image_slice_data* isd_pack=new image_slice_data();
+    //vector<Mat*> mat_vec;
+    //vector<image_pixel_data*> full_image_pixel_vec;
+    //image_slice_data* isd_pack=new image_slice_data();
     //above(within the class) are the old pieces of code
    
 
@@ -114,8 +112,13 @@ class image_package_class
         bool select_status=false;
         int avg_red,avg_green,avg_blue;
     };
+    //these are data vector for ONLY one image.
     vector<vector<image_map_element*>> image_map;//the main img map
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
+    vector<vector<image_map_element*>> border_element_vec;//border elements of each obj without the buffer area
+    vector<vector<image_map_element*>> obj_buffer_area;//buffer area data of each obj stored in order as that of obj_vec.
+    vector<vector<vector<Point>>> contours_vec;//for contours of each obj
+    vector<vector<Vec4i>> heirachy_vec;//for contours of each obj
     struct prepared_data
     {
         vector<vector<vector<image_map_element*>>> image_map_vec;
@@ -123,10 +126,14 @@ class image_package_class
     }prepared_data_obj;
     //temporary variables
     Mat* orig_image_temp;
-    int no_of_slices_row_wise,no_of_slices_col_wise;
+       //for canny edge detector
+        Mat* canny_edge_temp;
+        int lowThreshold=50;//30
+        int ratio=3,kernel_size=3;
+        int no_of_slices_row_wise,no_of_slices_col_wise;
     //meta data
     int label_id;
-    int slice_rows=2,slice_cols=2;
+    //int slice_rows=2,slice_cols=2;
     string label_str;
         //location information
         string dir_path;//label;
@@ -148,8 +155,12 @@ class image_package_class
     void data_arranger();
 
     void border_info_extractor();
-
-    void contour_finder();
+        //data preparation step 2
+    //void final_border_finder();
+    void contour_finder();//need testing
+    void buffer_area_finder(vector<image_map_element*> *border_elements);//need testing
+    void border_finder();//need testing
+        //data preparation step 1 
     struct obj_info
     {   
         int avg_red,avg_green,avg_blue,obj_id;
@@ -164,6 +175,7 @@ class image_package_class
     //similar object combination process strict
     int find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec);//ok tested
     bool check_if_element_is_border_element(image_map_element* element);//ok tested
+    void find_obj_border_elements(vector<image_map_element*> *obj,vector<image_map_element*> *border_element_vec);//need testing
     void find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results,vector<image_map_element*> *border_elements_vec);//ok tested
     struct sortingclass1 
     {
@@ -190,7 +202,7 @@ class image_package_class
     void enter_image_metadata(int start_index,vector<string> *img_file_name,vector<string> *img_paths);
     void remove_image_metadata(int start_index);
     //setting up of training critical variables
-    void enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color,float color_sensi,float colot_sensi,int slice_row,int slice_col,int min_size_of_obj1);
+    void enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color,float color_sensi,float colot_sensi,int min_size_of_obj1);
     //threading functions
     void split_package_data(vector<image_package_class*> *ipc_vec);//ok tested
     void combine_package_data(vector<image_package_class*> *ipc_vec);//ok tested

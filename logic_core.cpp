@@ -8,11 +8,11 @@ void img_data_preparation_process_handler::slicing_process_handler()
     vector<image_package_class*> ipc_vec;
     //ipc_vec.push_back(obj);
     //creation of objs for threads
-    obj->enter_training_critical_variables(no_of_sq_areas_need_to_be_checked_for_avg_color,color_sensitivity,color_sensitivity2,slice_row,slice_col,min_size_of_obj);
+    obj->enter_training_critical_variables(no_of_sq_areas_need_to_be_checked_for_avg_color,color_sensitivity,color_sensitivity2,min_size_of_obj);
     for(int a=0;a<no_of_physical_threads-1;a++)
     {
         image_package_class* new_obj=new image_package_class();
-        new_obj->enter_training_critical_variables(no_of_sq_areas_need_to_be_checked_for_avg_color,color_sensitivity,color_sensitivity2,slice_row,slice_col,min_size_of_obj);
+        new_obj->enter_training_critical_variables(no_of_sq_areas_need_to_be_checked_for_avg_color,color_sensitivity,color_sensitivity2,min_size_of_obj);
         ipc_vec.push_back(new_obj);
     }
     obj->split_package_data(&ipc_vec);
@@ -158,11 +158,9 @@ void logic_core::train_segment(vector<core_class> &core_vec)
     {
         img_data_preparation_process_handler* obj1=new img_data_preparation_process_handler();
         obj1->color_sensitivity=10;//for the color mapper
-        obj1->color_sensitivity2=30;//for un strict combination
+        obj1->color_sensitivity2=30;//30//for un strict combination
         obj1->no_of_sq_areas_need_to_be_checked_for_avg_color=5;//value for testing
         obj1->min_size_of_obj=40;
-        obj1->slice_col=1;//5
-        obj1->slice_row=1;//5
         obj1->obj=image_package_vec[a];
         img_data_preparation_process_handler_vec.push_back(obj1);
     }
