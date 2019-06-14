@@ -117,8 +117,19 @@ class image_package_class
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
     vector<vector<image_map_element*>> border_element_vec;//border elements of each obj without the buffer area
     vector<vector<image_map_element*>> obj_buffer_area;//buffer area data of each obj stored in order as that of obj_vec.
-    vector<vector<vector<Point>>> contours_vec;//for contours of each obj
-    vector<vector<Vec4i>> heirachy_vec;//for contours of each obj
+    vector<vector<Point>> orig_img_contours;
+    vector<Vec4i> orig_img_heirachy;
+    struct contour_map_element
+    {
+        bool contour_status=false;
+        int contour_id=-1;
+        //more stuff will be included
+    };
+    vector<vector<contour_map_element>>* contour_data_map;
+    
+    //vector<vector<vector<Point>>> contours_vec;//for contours of each obj
+    //vector<vector<Vec4i>> heirachy_vec;//for contours of each obj
+    //vector<Mat*> contour_data_map_vec;
     struct prepared_data
     {
         vector<vector<vector<image_map_element*>>> image_map_vec;
@@ -127,7 +138,6 @@ class image_package_class
     //temporary variables
     Mat* orig_image_temp;
        //for canny edge detector
-        Mat* canny_edge_temp;
         int lowThreshold=50;//30
         int ratio=3,kernel_size=3;
         int no_of_slices_row_wise,no_of_slices_col_wise;
@@ -156,10 +166,10 @@ class image_package_class
 
     void border_info_extractor();
         //data preparation step 2
-    //void final_border_finder();
-    void contour_finder();//need testing
-    void buffer_area_finder(vector<image_map_element*> *border_elements);//need testing
-    void border_finder();//need testing
+    void contour_data_plotter();//ok tested
+    void border_finder();//under construction
+    //void buffer_area_finder(vector<image_map_element*> *border_elements);//need testing
+    void data_preparation_for_border_finder();//ok tested
         //data preparation step 1 
     struct obj_info
     {   
@@ -171,7 +181,7 @@ class image_package_class
     };
     void obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs);//ok tested
     //similar obj combination process un-strict
-    void similar_obj_combinarion_process_un_strict();//need testing
+    void similar_obj_combinarion_process_un_strict();//ok tested
     //similar object combination process strict
     int find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec);//ok tested
     bool check_if_element_is_border_element(image_map_element* element);//ok tested

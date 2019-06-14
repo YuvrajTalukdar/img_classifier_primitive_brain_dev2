@@ -139,7 +139,7 @@ void image_package_class::create_color_maps()//color maper function//ok tested
         slice_col_size=percentage+2;
         slice_row_size=percentage+2;
     }
-    cout<<"\nrow="<<slice_row_size<<" col="<<slice_col_size;
+    //cout<<"\nrow="<<slice_row_size<<" col="<<slice_col_size;
     no_of_slices_row_wise=(orig_image_temp->rows)/slice_row_size;
     no_of_slices_col_wise=(orig_image_temp->cols)/slice_col_size;
     //initializing the image map
@@ -308,8 +308,18 @@ void image_package_class::find_obj_border_elements(vector<image_map_element*> *o
 {
     int new_col_index,new_row_index;
     int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
-    //find_obj_border_elements(obj,border_element_vec);
     //detect the first bordel cell by brut force
+    image_map_element *border_element;
+    int row_index_zero=obj->at(0)->row_index,column_index_zero=obj->at(0)->col_index,obj_id=obj->at(0)->obj_id;
+    int current_row=row_index_zero,current_col=column_index_zero;
+    while(current_row<image_map.size())
+    {
+        if(image_map.at(current_row).at(current_col)->obj_id==obj_id)
+        {   border_element=image_map.at(current_row).at(current_col);}
+        current_row--;
+    }
+    border_element_vec->push_back(border_element);
+    /* 
     image_map_element *border_element;
     border_element_vec->clear();
     for(int a=0;a<obj->size();a++)
@@ -330,7 +340,7 @@ void image_package_class::find_obj_border_elements(vector<image_map_element*> *o
         {   border_element=obj->at(a);break;}
     }
     border_element_vec->push_back(border_element);
-    
+    */
     //detect the  rest of the border elements
     int a=0;bool var=false;
     point1:
@@ -380,6 +390,19 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
       the whole code again, but due to compiler bug the above 
       function is not working when called from here. */
     //detect the first bordel cell by brut force
+    /* 
+    //this below algorithm is the correct version of the further below algorithm but results of the one 
+    image_map_element *border_element;
+    int row_index_zero=obj->at(0)->row_index,column_index_zero=obj->at(0)->col_index,obj_id=obj->at(0)->obj_id;
+    int current_row=row_index_zero,current_col=column_index_zero;
+    while(current_row<image_map.size())
+    {
+        if(image_map.at(current_row).at(current_col)->obj_id==obj_id)
+        {   border_element=image_map.at(current_row).at(current_col);}
+        current_row--;
+    }
+    border_element_vec->push_back(border_element);
+    */
     image_map_element *border_element;
     for(int a=0;a<obj->size();a++)
     {
@@ -759,135 +782,99 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
     obj_vec=new_obj_vec;
 }
 
-void image_package_class::buffer_area_finder(vector<image_map_element*> *border_elements)//need testing
+void image_package_class::contour_data_plotter()//ok tested
 {
-    int new_row_index,new_col_index,buffer_cells_to_occupy=8;
-    int delta_co_ordinates[4][2]={{0,-1},{0,1},{-1,0},{1,0}/*,{-1,-1},{-1,1},{1,1},{1,-1}*/};
-    vector<image_map_element*> buffer_area_for_one_obj;
-    for(int a=0;a<border_elements->size();a++)
+    vector<contour_map_element> contour_map_element_vec(orig_image_temp->cols);
+    vector<vector<contour_map_element>> contour_data_map1;
+    for(int b=0;b<orig_image_temp->rows;b++)
+    {   contour_data_map1.push_back(contour_map_element_vec);}
+    contour_data_map=&contour_data_map1;
+    for(int a=0;a<orig_img_contours.size();a++)
     {
-        for(int b=0;b<4;b++)
+        //plotting of each contours 
+        Mat contour_mat(orig_image_temp->rows,orig_image_temp->cols,CV_8UC3,Scalar(0,0,0));
+        drawContours(contour_mat,orig_img_contours,a,Scalar(255,255,255),1);
+        //finding the difference after and before plotting of the contours
+        int max_row=0,max_col=0,min_row=orig_img_contours.at(a).at(0).y,min_col=orig_img_contours.at(a).at(0).x;
+        for(int b=0;b<orig_img_contours.at(a).size();b++)
         {
-            new_row_index=border_elements->at(a)->row_index+delta_co_ordinates[b][0];
-            new_col_index=border_elements->at(a)->col_index+delta_co_ordinates[b][1];
-            if(new_col_index>=0 && new_row_index>=0 &&
-               new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() &&
-               image_map.at(new_row_index).at(new_col_index)->obj_id!=border_elements->at(a)->obj_id)
+            if(max_row<orig_img_contours.at(a).at(b).y)
+            {   max_row=orig_img_contours.at(a).at(b).y;}
+            if(max_col<orig_img_contours.at(a).at(b).x)
+            {   max_col=orig_img_contours.at(a).at(b).x;}
+            if(min_row>orig_img_contours.at(a).at(b).y)
+            {   min_row=orig_img_contours.at(a).at(b).y;}
+            if(min_col>orig_img_contours.at(a).at(b).x)
+            {   min_col=orig_img_contours.at(a).at(b).x;}
+        }
+        Mat ROI(contour_mat,Rect(min_col,min_row,(max_col-min_col+1),(max_row-min_row+1)));
+        for(int b=0;b<ROI.rows;b++)
+        {
+            for(int c=0;c<ROI.cols;c++)
             {
-                int delta,delta_delta;
-                bool col=false,row=true;
-                if(delta_co_ordinates[b][0]!=0)
-                {   delta=delta_co_ordinates[b][0];row=true;}
-                else if(delta_co_ordinates[b][1]!=0)
-                {   delta=delta_co_ordinates[b][1];col=true;}
-                delta_delta=delta;
-                for(int c=0;c<buffer_cells_to_occupy;c++)
+                if(((int)ROI.at<Vec3b>(b,c)[0])==255 /*&& ((int)ROI.at<Vec3b>(b,c)[1])==255 && ((int)ROI.at<Vec3b>(b,c)[2])==255*/)
                 {
-                    if(row==true &&
-                       border_elements->at(b)->row_index+delta>=0 && border_elements->at(b)->row_index+delta<image_map.size() &&
-                       image_map.at(border_elements->at(b)->row_index+delta).at(border_elements->at(b)->col_index)->obj_id!=border_elements->at(b)->obj_id 
-                       )
-                    {
-                        buffer_area_for_one_obj.push_back(image_map.at(border_elements->at(b)->row_index+delta).at(border_elements->at(b)->col_index));
-                    }
-                    else if(col==true && 
-                            border_elements->at(b)->col_index+delta>=0 && border_elements->at(b)->col_index+delta<image_map.at(border_elements->at(b)->row_index).size() &&
-                            image_map.at(border_elements->at(b)->row_index).at(border_elements->at(b)->col_index+delta)->obj_id!=border_elements->at(b)->obj_id
-                            )
-                    {
-                        buffer_area_for_one_obj.push_back(image_map.at(border_elements->at(b)->row_index).at(border_elements->at(b)->col_index+delta));
-                    }
-                    delta+=delta_delta;
+                    contour_data_map->at(b+min_row).at(c+min_col).contour_status=true;
+                    contour_data_map->at(b+min_row).at(c+min_col).contour_id=a+1;
                 }
             }
         }
+        ROI.release();
+        contour_mat.release();
     }
-    obj_buffer_area.push_back(buffer_area_for_one_obj);
+    orig_img_contours.clear();
+    orig_img_heirachy.clear();
+    /*
+    Mat test(orig_image_temp->rows,orig_image_temp->cols,CV_8UC3,Scalar(0,0,0));
+    cout<<"\nrow="<<contour_data_map->size()<<" col="<<contour_data_map->at(0).size()<<" n_row="<<test.rows<<" n_col="<<test.cols;
+    int ghj;cin>>ghj;
+    for(int a=0;a<contour_data_map->size();a++)
+    {
+        for(int b=0;b<contour_data_map->at(a).size();b++)
+        {
+            if(contour_data_map->at(a).at(b).contour_status==true)
+            {
+                test.at<Vec3b>(a,b)[0]=255;
+                test.at<Vec3b>(a,b)[1]=255;
+                test.at<Vec3b>(a,b)[2]=255;
+            }
+        }
+    }
+    imshow("test",test);
+    waitKey(0);
+    int gh;cin>>gh;
+    test.release();*/
 }
 
-void image_package_class::contour_finder()//need testing
+void image_package_class::border_finder()//under construction
 {
-    //for getting the approx size of the required mat
-    for(int a=0;a<obj_vec.size();a++)
-    {   
-        //int max_row=0,max_col=0,min_row=obj_vec.at(a).at(0)->row_index,min_col=obj_vec.at(a).at(0)->col_index;
-        int max_row=0,max_col=0,min_row=border_element_vec.at(a).at(0)->row_index,min_col=border_element_vec.at(a).at(0)->col_index;
-        for(int b=0;b<border_element_vec.at(a).size();b++)
-        {
-            if(max_row<border_element_vec.at(a).at(b)->row_index)
-            {   max_row=border_element_vec.at(a).at(b)->row_index;}
-            if(max_col<border_element_vec.at(a).at(b)->col_index)
-            {   max_col=border_element_vec.at(a).at(b)->col_index;}
-            if(min_row>border_element_vec.at(a).at(b)->row_index)
-            {   min_row=border_element_vec.at(a).at(b)->row_index;}
-            if(min_col>border_element_vec.at(a).at(b)->col_index)
-            {   min_col=border_element_vec.at(a).at(b)->col_index;}
-        }
-        for(int b=0;b<obj_buffer_area.at(a).size();b++)
-        {
-            if(max_row<obj_buffer_area.at(a).at(b)->row_index)
-            {   max_row=obj_buffer_area.at(a).at(b)->row_index;}
-            if(max_col<obj_buffer_area.at(a).at(b)->col_index)
-            {   max_col=obj_buffer_area.at(a).at(b)->col_index;}
-            if(min_row>obj_buffer_area.at(a).at(b)->row_index)
-            {   min_row=obj_buffer_area.at(a).at(b)->row_index;}
-            if(min_col>obj_buffer_area.at(a).at(b)->col_index)
-            {   min_col=obj_buffer_area.at(a).at(b)->col_index;}
-        }
-        int orig_min_row=min_row*slice_row_size,orig_min_col=min_col*slice_col_size;
-        int orig_max_row=max_row*slice_row_size,orig_max_col=max_col*slice_col_size;
-        Mat* slice=new Mat();
-        cout<<"\n\nc_row="<<canny_edge_temp->rows<<" c_col="<<canny_edge_temp->cols;
-        cout<<" \nomi_row"<<orig_min_col<<" omi_col="<<orig_min_col<<" oma_row="<<orig_max_row<<" oma_col="<<orig_max_col<<" b="<<a;
-        Mat ROI(*canny_edge_temp,Rect(orig_min_col,orig_min_row,(orig_max_col-orig_min_col),(orig_max_row-orig_min_row)));
-        ROI.copyTo(*slice);
-        vector<vector<Point>> contours;
-        vector<Vec4i> heirachy;
-        contours.clear();
-        heirachy.clear();
-        cv::findContours(*slice,contours,heirachy,CV_RETR_TREE,CV_CHAIN_APPROX_SIMPLE,Point(0,0));
-        contours_vec.push_back(contours);
-        heirachy_vec.push_back(heirachy);
-        /*Mat contour_dis=Mat::zeros(slice->size(),CV_8UC3);
-        for(int b=0;b<contours.size();b++)
-        {
-            drawContours(contour_dis,contours,b,Scalar(255,255,255),1,8,heirachy,0,Point());
-        }*/
-        //int ghf;cin>>ghf;
-        //imshow("slice",*slice);
-        //waitKey(0);
-        //imshow("contour",contour_dis);
-        //waitKey(0);
-        //int gh;cin>>gh;
-        //contour_dis.release();
-        slice->release();
-    }
+    contour_data_plotter();
 }
 
-void image_package_class::border_finder()//need testing
+void image_package_class::data_preparation_for_border_finder()//ok tested
 {   
     //border elements collection and buffer area creator
     vector<image_map_element*> border_elements;
     obj_buffer_area.clear();
+    border_element_vec.clear();
     for(int a=0;a<obj_vec.size();a++)
     {
+        border_elements.clear();
         find_obj_border_elements(&obj_vec.at(a),&border_elements);
-        buffer_area_finder(&border_elements);
+        //buffer_area_finder(&border_elements);
         border_element_vec.push_back(border_elements);
     }
     //canny edge detector
+    Mat* canny_edge_temp;
     canny_edge_temp=new Mat(orig_image_temp->cols,orig_image_temp->rows,CV_8UC3,Scalar(0,0,0));
     Mat orig_img_gray;
     cvtColor(*orig_image_temp,orig_img_gray,CV_BGR2GRAY);
     blur(orig_img_gray,*canny_edge_temp,Size(kernel_size,kernel_size));
     Canny(*canny_edge_temp,*canny_edge_temp,lowThreshold,lowThreshold*ratio,kernel_size);
-    //for contour funder
-    heirachy_vec.clear();
-    contours_vec.clear();
-    contour_finder();
-        //contour finder
-        //final border finder
-    
+    orig_img_contours.clear();
+    orig_img_heirachy.clear();
+    cv::findContours(*canny_edge_temp,orig_img_contours,orig_img_heirachy,CV_RETR_TREE,CV_CHAIN_APPROX_SIMPLE,Point(0,0));
+    orig_img_gray.release();
     canny_edge_temp->release();
     //cout<<"\n\n\n\nobj_vec="<<obj_vec.size()<<" buffer="<<obj_buffer_area.size();int gh;cin>>gh;
 }
@@ -904,6 +891,7 @@ void image_package_class::start_data_preparation_process()
         similar_obj_combination_process_strict();//no data leakage till here
         similar_obj_combinarion_process_un_strict();//leakage fixed
         //data preparation step 2
+        data_preparation_for_border_finder();
         border_finder();
         //data preparation step 3
         border_info_extractor();
