@@ -111,6 +111,8 @@ class image_package_class
         int obj_id=-1;
         bool select_status=false;
         int avg_red,avg_green,avg_blue;
+        vector<int> id_of_contours_present_under_the_slice;
+        vector<vector<int>> co_ordinates_of_contour_elements;//co-ordinates are placed in same order as that of id_of_contours_present_under_the_slice.
     };
     //these are data vector for ONLY one image.
     vector<vector<image_map_element*>> image_map;//the main img map
@@ -119,17 +121,21 @@ class image_package_class
     vector<vector<image_map_element*>> obj_buffer_area;//buffer area data of each obj stored in order as that of obj_vec.
     vector<vector<Point>> orig_img_contours;
     vector<Vec4i> orig_img_heirachy;
+    int total_no_of_contours;
     struct contour_map_element
     {
         bool contour_status=false;
         int contour_id=-1;
         //more stuff will be included
     };
-    vector<vector<contour_map_element>>* contour_data_map;
+    vector<vector<contour_map_element>> contour_data_map;//map of the contour data
+        //output from the border differentiator
+    vector<vector<image_map_element*>> non_conflict_border_elements_vec;
+    vector<vector<image_map_element*>> conflict_border_elements_vec;
+    vector<vector<vector<int>>> contour_info_vec_vec;
+    //output from the prominient_border_finder
+    vector<int> prominient_contour_id; //format [id][prominiency status] 1=prominient 0= not prominient. This is ment for the entire image not a single obj.
     
-    //vector<vector<vector<Point>>> contours_vec;//for contours of each obj
-    //vector<vector<Vec4i>> heirachy_vec;//for contours of each obj
-    //vector<Mat*> contour_data_map_vec;
     struct prepared_data
     {
         vector<vector<vector<image_map_element*>>> image_map_vec;
@@ -166,9 +172,13 @@ class image_package_class
 
     void border_info_extractor();
         //data preparation step 2
+    void border_plotter(vector<vector<image_map_element*>>* border);//this is a testing function
+
+    void prominient_border_finder();//ok tested
+    void check_contour_status_under_an_element(vector<vector<int>>* contour_statistics,int obj_index,int row_index,int col_index,bool *partially_conflict_status);//may need improvement
+    void border_differentiator();//ok tested
     void contour_data_plotter();//ok tested
     void border_finder();//under construction
-    //void buffer_area_finder(vector<image_map_element*> *border_elements);//need testing
     void data_preparation_for_border_finder();//ok tested
         //data preparation step 1 
     struct obj_info
