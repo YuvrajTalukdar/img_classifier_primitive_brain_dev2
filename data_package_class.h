@@ -111,8 +111,8 @@ class image_package_class
         int obj_id=-1;
         bool select_status=false;
         int avg_red,avg_green,avg_blue;
-        vector<int> id_of_contours_present_under_the_slice;
-        vector<vector<int>> co_ordinates_of_contour_elements;//co-ordinates are placed in same order as that of id_of_contours_present_under_the_slice.
+        //vector<int> id_of_contours_present_under_the_slice;
+        //vector<vector<int>> co_ordinates_of_contour_elements;//co-ordinates are placed in same order as that of id_of_contours_present_under_the_slice.
     };
     //these are data vector for ONLY one image.
     vector<vector<image_map_element*>> image_map;//the main img map
@@ -132,10 +132,16 @@ class image_package_class
         //output from the border differentiator
     vector<vector<image_map_element*>> non_conflict_border_elements_vec;
     vector<vector<image_map_element*>> conflict_border_elements_vec;
-    vector<vector<vector<int>>> contour_info_vec_vec;
+    //vector<vector<vector<int>>> contour_info_vec_vec;//no of contours elements of each type in each obj
     //output from the prominient_border_finder
     vector<int> prominient_contour_id; //format [id][prominiency status] 1=prominient 0= not prominient. This is ment for the entire image not a single obj.
-    
+    struct contour_struct
+    {
+        int contour_id;
+        int contour_count=0;
+        vector<image_map_element*> contourelement_vec;
+    };
+    vector<contour_struct> contour_vec;//contour data stored 
     struct prepared_data
     {
         vector<vector<vector<image_map_element*>>> image_map_vec;
@@ -173,7 +179,8 @@ class image_package_class
     void border_info_extractor();
         //data preparation step 2
     void border_plotter(vector<vector<image_map_element*>>* border);//this is a testing function
-
+    
+    void get_contour_ids_under_a_slice(image_map_element* slice,vector<int>* id_vec);//need testing
     void prominient_border_finder();//ok tested
     void check_contour_status_under_an_element(vector<vector<int>>* contour_statistics,int obj_index,int row_index,int col_index,bool *partially_conflict_status);//may need improvement
     void border_differentiator();//ok tested

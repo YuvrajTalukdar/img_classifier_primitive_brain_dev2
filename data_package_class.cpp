@@ -784,6 +784,7 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
 
 void image_package_class::contour_data_plotter()//ok tested
 {
+    contour_vec.clear();
     vector<contour_map_element> contour_map_element_vec(orig_image_temp->cols);
     contour_data_map.clear();
     for(int b=0;b<orig_image_temp->rows;b++)
@@ -807,43 +808,37 @@ void image_package_class::contour_data_plotter()//ok tested
             {   min_col=orig_img_contours.at(a).at(b).x;}
         }
         Mat ROI(contour_mat,Rect(min_col,min_row,(max_col-min_col+1),(max_row-min_row+1)));
+        contour_struct new_contour_struct;
+        new_contour_struct.contour_id=a+1;
+        int row_temp=-1,col_temp=-1;
         for(int b=0;b<ROI.rows;b++)
         {
             for(int c=0;c<ROI.cols;c++)
             {
                 if(((int)ROI.at<Vec3b>(b,c)[0])==255 /*&& ((int)ROI.at<Vec3b>(b,c)[1])==255 && ((int)ROI.at<Vec3b>(b,c)[2])==255*/)
                 {
+                    new_contour_struct.contour_count++;//counter counter
                     contour_data_map.at(b+min_row).at(c+min_col).contour_status=true;
                     contour_data_map.at(b+min_row).at(c+min_col).contour_id=a+1;
+                    bool found=false;
+                    for(int d=0;d<new_contour_struct.contourelement_vec.size();d++)
+                    {
+                        if(new_contour_struct.contourelement_vec.at(d)->row_index==((b+min_row)/slice_row_size) && 
+                           new_contour_struct.contourelement_vec.at(d)->col_index==((c+min_col)/slice_col_size))
+                           {    found=true;}
+                    }
+                    if(found==false)
+                    {   new_contour_struct.contourelement_vec.push_back(image_map.at((b+min_row)/slice_row_size).at((c+min_col)/slice_col_size));}
                 }
             }
         }
+        contour_vec.push_back(new_contour_struct);
         ROI.release();
         contour_mat.release();
     }
     total_no_of_contours=orig_img_contours.size();
     orig_img_contours.clear();
     orig_img_heirachy.clear();
-    /*
-    Mat test(orig_image_temp->rows,orig_image_temp->cols,CV_8UC3,Scalar(0,0,0));
-    cout<<"\nrow="<<contour_data_map->size()<<" col="<<contour_data_map->at(0).size()<<" n_row="<<test.rows<<" n_col="<<test.cols;
-    int ghj;cin>>ghj;
-    for(int a=0;a<contour_data_map->size();a++)
-    {
-        for(int b=0;b<contour_data_map->at(a).size();b++)
-        {
-            if(contour_data_map->at(a).at(b).contour_status==true)
-            {
-                test.at<Vec3b>(a,b)[0]=255;
-                test.at<Vec3b>(a,b)[1]=255;
-                test.at<Vec3b>(a,b)[2]=255;
-            }
-        }
-    }
-    imshow("test",test);
-    waitKey(0);
-    int gh;cin>>gh;
-    test.release();*/
 }
 
 void image_package_class::check_contour_status_under_an_element(vector<vector<int>>* contour_statistics,int obj_index,int row_index,int col_index,bool *partially_conflict_status)//ok tested
@@ -858,13 +853,7 @@ void image_package_class::check_contour_status_under_an_element(vector<vector<in
         for(int b=0;b<slice_col_size;b++)
         {
             if(contour_data_map.at(a+orig_row_index).at(b+orig_col_index).contour_status==true)
-            {
-                image_map.at(row_index).at(col_index)->id_of_contours_present_under_the_slice.push_back(contour_data_map.at(a+orig_row_index).at(b+orig_col_index).contour_id);
-                vector<int> co_ordinates(2);
-                co_ordinates.clear();
-                co_ordinates.push_back(orig_row_index+a);
-                co_ordinates.push_back(orig_col_index+b);
-                image_map.at(row_index).at(col_index)->co_ordinates_of_contour_elements.push_back(co_ordinates);
+            {   
                 if(previous_contour_id==0 || previous_contour_id!=contour_data_map.at(a+orig_row_index).at(b+orig_col_index).contour_id)
                 {   
                     no_of_contour_elements_present++;
@@ -914,21 +903,7 @@ void image_package_class::border_differentiator()//ok tested
         }
         non_conflict_border_elements_vec.push_back(non_conflict_border_elements);
         conflict_border_elements_vec.push_back(conflict_border_elements);
-        contour_info_vec_vec.push_back(contour_info_vec);
-        /*
-        cout<<"\non_conflict_border_elements:-"<<non_conflict_border_elements.size();
-        cout<<"\nconflict_border_elements:-"<<conflict_border_elements.size();
-        cout<<"\ncontour_info_vec:-"<<contour_info_vec.size();
-        cout<<"\nborder_element_size="<<border_element_vec.at(a).size();
-        int ghj;cin>>ghj;
-        for(int b=0;b<contour_info_vec.size();b++)
-        {
-            cout<<"\ncontour_id="<<contour_info_vec.at(b).at(0)<<" no="<<contour_info_vec.at(b).at(1);
-        }
-        int gh;cin>>gh;
-        */
-        //under construction
-
+        //contour_info_vec_vec.push_back(contour_info_vec);
     }
 }
 
@@ -946,8 +921,7 @@ void image_package_class::border_plotter(vector<vector<image_map_element*>>* bor
         rgb_vec.push_back(r_g_b);
     }
     for(int a=0;a<border_element_vec.size();a++)
-    {
-        
+    {  
         //cout<<"\nobj="<<border_element_vec.size()<<" non_con="<<border->size();
         //int ghj;cin>>ghj;
         //Mat test(orig_image_temp->rows,orig_image_temp->cols,CV_8UC3,Scalar(0,0,0));
@@ -982,29 +956,56 @@ void image_package_class::border_plotter(vector<vector<image_map_element*>>* bor
                 }
             }
         }
-    
+        //test
+        /*cout<<"\n\n";
+        for(int b=0;b<conflict_border_elements_vec.at(a).size();b++)
+        {
+            cout<<"\nid="<<conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.size();
+        }*/
+        //imshow("test",test);
+        //test.release();
+        //waitKey(0);
+        //int gh;cin>>gh;  
     }
+    //int gh;cin>>gh;
     imshow("test",test);
     waitKey(0);
-    //int gh;cin>>gh;
-    //test.release();   
+    test.release();   
+}
+
+void image_package_class::get_contour_ids_under_a_slice(image_map_element* slice,vector<int>* id_vec)//need testing
+{
+    id_vec->clear();
+    int orig_row_index=slice->row_index*slice_row_size,orig_col_index=slice->col_index*slice_col_size;
+    for(int a=0;a<slice_row_size;a++)
+    {
+        for(int b=0;b<slice_col_size;b++)
+        {
+            if(orig_row_index+a<contour_data_map.size() && orig_col_index+b<contour_data_map.at(orig_row_index+a).size() && 
+               contour_data_map.at(orig_row_index+a).at(orig_col_index+b).contour_status==true)
+            {   id_vec->push_back(contour_data_map.at(orig_row_index+a).at(orig_col_index+b).contour_id);}
+        }
+    }
 }
 
 void image_package_class::prominient_border_finder()//ok tested
 {
+    vector<int> prominient_contour_id_for_one_obj;
     vector<vector<int>> contour_counter_for_obj;
+    vector<int> id_vec;
     for(int a=0;a<obj_vec.size();a++)//for each obj
     {
         contour_counter_for_obj.clear();
         //contour statistics collection for each obj
         for(int b=0;b<non_conflict_border_elements_vec.at(a).size();b++)//for each slice
         {
-            for(int c=0;c<non_conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.size();c++)//for id vectors present under the slice
+            get_contour_ids_under_a_slice(non_conflict_border_elements_vec.at(a).at(b),&id_vec);
+            for(int c=0;c<id_vec.size();c++)//for id vectors present under the slice
             {
                 bool found=false;
                 for(int d=0;d<contour_counter_for_obj.size();d++)// for contour_counter_for_obj 
                 {
-                    if(non_conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.at(c)==contour_counter_for_obj.at(d).at(0))
+                    if(id_vec.at(c)==contour_counter_for_obj.at(d).at(0))
                     {
                         found=true;
                         contour_counter_for_obj.at(d).at(1)++;
@@ -1014,7 +1015,7 @@ void image_package_class::prominient_border_finder()//ok tested
                 if(found==false)
                 {
                     vector<int> contour_counter_element(2);
-                    contour_counter_element.at(0)=non_conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.at(c);
+                    contour_counter_element.at(0)=id_vec.at(c);
                     contour_counter_element.at(1)=1;
                     contour_counter_for_obj.push_back(contour_counter_element);
                 }
@@ -1023,12 +1024,13 @@ void image_package_class::prominient_border_finder()//ok tested
 
         for(int b=0;b<conflict_border_elements_vec.at(a).size();b++)
         {
-            for(int c=0;c<conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.size();c++)//for id vectors present under the slice
+            get_contour_ids_under_a_slice(conflict_border_elements_vec.at(a).at(b),&id_vec);
+            for(int c=0;c<id_vec.size();c++)//for id vectors present under the slice
             {
                 bool found=false;
                 for(int d=0;d<contour_counter_for_obj.size();d++)// for contour_counter_for_obj 
                 {
-                    if(conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.at(c)==contour_counter_for_obj.at(d).at(0))
+                    if(id_vec.at(c)==contour_counter_for_obj.at(d).at(0))
                     {
                         found=true;
                         contour_counter_for_obj.at(d).at(1)++;
@@ -1038,57 +1040,60 @@ void image_package_class::prominient_border_finder()//ok tested
                 if(found==false)
                 {
                     vector<int> contour_counter_element(2);
-                    contour_counter_element.at(0)=conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.at(c);
+                    contour_counter_element.at(0)=id_vec.at(c);
                     contour_counter_element.at(1)=1;
                     contour_counter_for_obj.push_back(contour_counter_element);
                 }
             }
         }
         //prominient contour finder
+        prominient_contour_id_for_one_obj.clear();
         for(int b=0;b<contour_counter_for_obj.size();b++)
         {
-            for(int c=0;c<contour_info_vec_vec.at(a).size();c++)
+            for(int c=0;c<contour_vec.size();c++)
             {
-                if(contour_counter_for_obj.at(b).at(0)==contour_info_vec_vec.at(a).at(c).at(0))
+                if(contour_counter_for_obj.at(b).at(0)==contour_vec.at(c).contour_id)
                 {
-                    bool found=false;
-                    for(int d=0;d<prominient_contour_id.size();d++)
-                    {
-                        if(prominient_contour_id.at(d)==contour_counter_for_obj.at(b).at(0))
-                        {   found=true;break;}
+                    if((((float)contour_counter_for_obj.at(b).at(1))/((float)contour_vec.at(c).contour_count))>0.30)
+                    {   prominient_contour_id_for_one_obj.push_back(contour_counter_for_obj.at(b).at(0));
+                        //cout<<"\ncontour_counter_for_obj.at(b).at(1)="<<contour_counter_for_obj.at(b).at(1)<<" contour_info_vec_vec.at(a).at(c).at(1)="<<contour_vec.at(c).contour_count;
+                        //int gh;cin>>gh;
                     }
-                    if(found==false && (((float)contour_counter_for_obj.at(b).at(1)))/((float)contour_info_vec_vec.at(a).at(c).at(1))>0.50)
-                    {   prominient_contour_id.push_back(contour_counter_for_obj.at(b).at(0));}
                     break;
                 }
             }
         }
-    }
-    //shifting of conflicting border elements to non conflicting border elements
-    for(int a=0;a<obj_vec.size();a++)
-    {
-        //cout<<"\nc_data_before="<<conflict_border_elements_vec.at(a).size()<<" nc_data_before="<<non_conflict_border_elements_vec.at(a).size();;
-        for(int b=conflict_border_elements_vec.at(a).size()-1;b>=0;b--)
+        for(int b=0;b<prominient_contour_id_for_one_obj.size();b++)
         {
-            for(int c=0;c<conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.size();c++)
+            bool found=false;
+            for(int c=0;c<prominient_contour_id.size();c++)
             {
-                bool found=false;
-                for(int d=0;d<prominient_contour_id.size();d++)
+                if(prominient_contour_id_for_one_obj.at(b)==prominient_contour_id.at(c))
+                {   found=true;break;}
+            }
+            if(found==false)
+            {   prominient_contour_id.push_back(prominient_contour_id_for_one_obj.at(b));}
+        }
+        //adding the rest of the contour containing slices to the border
+        for(int b=0;b<prominient_contour_id_for_one_obj.size();b++)
+        {
+            for(int c=0;c<contour_vec.size();c++)
+            {
+                if(contour_vec.at(c).contour_id==prominient_contour_id_for_one_obj.at(b))
                 {
-                    if(conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.at(c)==prominient_contour_id.at(d))
-                    {
-                        non_conflict_border_elements_vec.at(a).push_back(conflict_border_elements_vec.at(a).at(b));
-                        conflict_border_elements_vec.at(a).erase(conflict_border_elements_vec.at(a).begin()+b);
-                        found=true;
-                        break;
+                    non_conflict_border_elements_vec.at(a).insert(non_conflict_border_elements_vec.at(a).begin(),contour_vec.at(c).contourelement_vec.begin(),contour_vec.at(c).contourelement_vec.end());
+                    for(int d=conflict_border_elements_vec.at(a).size()-1;d>=0;d--)
+                    {   
+                        if(conflict_border_elements_vec.at(a).at(d)->obj_id==contour_vec.at(c).contour_id)
+                        {
+                            conflict_border_elements_vec.at(a).erase(conflict_border_elements_vec.at(a).begin()+d);
+                        }
                     }
+                    break;
                 }
-                if(found==true)
-                {   break;}
             }
         }
-        //cout<<"  c_data_after="<<conflict_border_elements_vec.at(a).size()<<" nc_data_after="<<non_conflict_border_elements_vec.at(a).size();
-        //int gh;cin>>gh;
+        prominient_contour_id_for_one_obj.clear();
     }
 }
 
@@ -1096,10 +1101,9 @@ void image_package_class::border_finder()//under construction
 {
     contour_data_plotter();
     border_differentiator();
-    //border_plotter(&non_conflict_border_elements_vec);
+    //border_plotter(&conflict_border_elements_vec);
     prominient_border_finder();
-    //border_plotter(&non_conflict_border_elements_vec);
-    //int gh;cin>>gh;
+    border_plotter(&non_conflict_border_elements_vec);
 }
 
 void image_package_class::data_preparation_for_border_finder()//ok tested
