@@ -12,6 +12,9 @@ void image_package_class::border_info_extractor()
 
 int image_package_class::avg_color_in_slice(Mat* slice,char color)//color maper function//ok tested
 {
+    //Mat hsv;
+    //cvtColor(*slice,hsv,COLOR_BGR2HSV);
+
     int avg=0;
     for(int a=0;a<slice->rows;a++)
     {
@@ -23,60 +26,115 @@ int image_package_class::avg_color_in_slice(Mat* slice,char color)//color maper 
             {   avg+=(int)slice->at<Vec3b>(a,b)[1];}
             else if(color=='b'||color=='B')
             {   avg+=(int)slice->at<Vec3b>(a,b)[0];}
+
+            //else if(color=='h'||color=='H')
+            //{   avg+=(int)hsv.at<Vec3b>(a,b)[0];}
         }
     }
+    
+    //hsv.release();
+
     avg=avg/(slice->rows*slice->cols);
     return avg;
 }
 
-float image_package_class::color_distance2(image_map_element* origin_element,image_map_element* new_element)//color maper function//ok tested but poor result than its counterpart
+float image_package_class::hue_distance_calc(float h1,float h2)
 {
-    int close_elements=0;
-    int orig_row_index=origin_element->row_index*slice_row_size,orig_col_index=origin_element->col_index*slice_col_size;
-    int new_row_index=new_element->row_index*slice_row_size,new_col_index=new_element->col_index*slice_col_size;
-    Mat* orig_element_slice=new Mat();
-    Mat ROI1(*orig_image_temp,Rect(orig_col_index,orig_row_index,slice_row_size,slice_col_size));
-    ROI1.copyTo(*orig_element_slice);
-    Mat* new_element_slice=new Mat();
-    Mat ROI2(*orig_image_temp,Rect(new_col_index,new_row_index,slice_row_size,slice_col_size));
-    ROI2.copyTo(*new_element_slice);
-    for(int a=0;a<slice_row_size;a++)
-    {
-        for(int b=0;b<slice_col_size;b++)
-        {
-            for(int c=0;c<slice_row_size;c++)
-            {
-                for(int d=0;d<slice_col_size;d++)
-                {
-                    int red_orig=orig_element_slice->at<Vec3b>(c,d)[2],green_orig=orig_element_slice->at<Vec3b>(c,d)[1],blue_orig=orig_element_slice->at<Vec3b>(c,d)[0];
-                    int red_new=new_element_slice->at<Vec3b>(a,b)[2],green_new=new_element_slice->at<Vec3b>(a,b)[1],blue_new=new_element_slice->at<Vec3b>(a,b)[0];
-                    if(sqrt(pow((red_orig-red_new),2)+pow((green_orig-green_new),2)+pow((blue_orig-blue_new),2))<color_sensitiviy)
-                    {   close_elements++;}
-                }
-            }
-        }
-    }
-    float total=pow((slice_col_size*slice_row_size),2);
-    float percentage=(((float)close_elements)/(float)total)*((float)100.0);
-    return percentage;
+    //direct calc
+    float difference1=abs(h1-h2);
+    //reverse calc
+    float difference2;
+    //left calc is same as the values h1 and h2
+    //right calc
+    float right_calc1=abs(180.0-h1);
+    float right_calc2=abs(180.0-h2);
+    float h1_new,h2_new;
+    if(right_calc1<h1)
+    {   h1_new=right_calc1;}
+    else
+    {   h1_new=h1;}
+    if(right_calc2<h2)
+    {   h2_new=right_calc2;}
+    else
+    {   h2_new=h2;}
+    difference2=abs(h1_new+h2_new);
+    if(difference2<difference1)
+    {   difference1=difference2;}
+    return difference1;
 }
 
-float image_package_class::color_distance(image_map_element* origin_element,image_map_element* new_element)//color maper function//ok tested
+bool image_package_class::color_distance(image_map_element* origin_element,image_map_element* new_element)//color maper function//ok tested
 {
     float distance=0;
-    int no_of_cells_to_check;
-    if(obj_elements_vec_ptr->size()>=5)
-    {   no_of_cells_to_check=5;}
+    int no_of_cells_to_check=1;
+    if(obj_elements_vec_ptr->size()>=5)//5
+    {   no_of_cells_to_check=5;}//5
     else
     {   no_of_cells_to_check=obj_elements_vec_ptr->size();}
+    bool all_is_well=true;
+    int count1=0;
     for(int a=obj_elements_vec_ptr->size()-1;a>=obj_elements_vec_ptr->size()-no_of_cells_to_check;--a)
     {
         if(a<0)
         {   break;}
-        distance+=sqrt(pow((obj_elements_vec_ptr->at(a)->avg_red-new_element->avg_red),2)+pow((obj_elements_vec_ptr->at(a)->avg_green-new_element->avg_green),2)+pow((obj_elements_vec_ptr->at(a)->avg_blue-new_element->avg_blue),2));
+        Mat hsv1,hsv2,conversion_mat1=Mat(2,2,CV_8UC3),conversion_mat2=Mat(2,2,CV_8UC3);
+        for(int b=0;b<2;b++)
+        {
+            for(int c=0;c<2;c++)
+            {
+                conversion_mat1.at<Vec3b>(b,c)[2]=obj_elements_vec_ptr->at(a)->avg_red;
+                conversion_mat1.at<Vec3b>(b,c)[1]=obj_elements_vec_ptr->at(a)->avg_green;
+                conversion_mat1.at<Vec3b>(b,c)[0]=obj_elements_vec_ptr->at(a)->avg_blue;
+                
+                conversion_mat2.at<Vec3b>(b,c)[2]=new_element->avg_red;
+                conversion_mat2.at<Vec3b>(b,c)[1]=new_element->avg_green;
+                conversion_mat2.at<Vec3b>(b,c)[0]=new_element->avg_blue;    
+            }
+        }
+        cvtColor(conversion_mat1,hsv1,CV_BGR2HSV);
+        cvtColor(conversion_mat2,hsv2,CV_BGR2HSV);
+        conversion_mat1.release();
+        conversion_mat2.release();
+        //       +
+        //distance=sqrt(pow((obj_elements_vec_ptr->at(a)->avg_red-new_element->avg_red),2)+pow((obj_elements_vec_ptr->at(a)->avg_green-new_element->avg_green),2)+pow((obj_elements_vec_ptr->at(a)->avg_blue-new_element->avg_blue),2)+pow((((int)hsv1.at<Vec3b>(0,0)[0])-((int)hsv2.at<Vec3b>(0,0)[0])),2));
+        float hue_distance=hue_distance_calc(((int)hsv1.at<Vec3b>(0,0)[0]),((int)hsv2.at<Vec3b>(0,0)[0]));
+        hue_distance=(hue_distance/180.0)*255.0;
+        //float value_distance=abs(((int)hsv1.at<Vec3b>(0,0)[2])-((int)hsv2.at<Vec3b>(0,0)[2]));
+        //if(hue_distance<=25)
+        //{   hue_distance=0;}
+        float red_dis=obj_elements_vec_ptr->at(a)->avg_red-new_element->avg_red,green_dis=obj_elements_vec_ptr->at(a)->avg_green-new_element->avg_green,blue_dis=obj_elements_vec_ptr->at(a)->avg_blue-new_element->avg_blue;
+        //rgb dampners based on hue, this is to prevent the total failuure in the apple and orange pic but the performance in other imgs get reduced.
+        /*if(hue_distance<3)
+        {   
+            red_dis=red_dis*(3.0/4.0);
+            green_dis=green_dis*(3.0/4.0);
+            blue_dis=blue_dis*(3.0/4.0);
+        }*/
+        //hue value stabilizer (makes hue value to 0 when value is high and satturation is near 0) //for sloving the new hue problem particular in the japanese building picture
+        float s_avg1=(int)hsv1.at<Vec3b>(0,0)[1],s_avg2=(int)hsv2.at<Vec3b>(0,0)[1];
+        float v_avg1=(int)hsv1.at<Vec3b>(0,0)[2],v_avg2=(int)hsv2.at<Vec3b>(0,0)[2];
+        if(s_avg1<20 && s_avg2<20 && v_avg1>230 && v_avg2>230)
+        {   hue_distance=0;}
+        float distance1=sqrt(pow((red_dis),2)+pow((green_dis),2)+pow((blue_dis),2)+pow((hue_distance),2));
+        //float distance1=sqrt(pow((obj_elements_vec_ptr->at(a)->avg_red-new_element->avg_red),2)+pow((obj_elements_vec_ptr->at(a)->avg_green-new_element->avg_green),2)+pow((obj_elements_vec_ptr->at(a)->avg_blue-new_element->avg_blue),2)+pow((hue_distance),2)+pow(value_distance,2));
+        distance+=distance1;
+        //distance+=sqrt(pow((obj_elements_vec_ptr->at(a)->avg_red-new_element->avg_red),2)+pow((obj_elements_vec_ptr->at(a)->avg_green-new_element->avg_green),2)+pow((obj_elements_vec_ptr->at(a)->avg_blue-new_element->avg_blue),2));//non patched
+        /*if(distance1>color_sensitiviy)
+        {   count1++;}
+        if(count1>no_of_cells_to_check/2)
+        {   break;}*/
+        hsv1.release();
+        hsv2.release();
+        
+        //distance+=obj_elements_vec_ptr->at(a)->avg_hue-new_element->avg_hue;
     }
     //float distance=sqrt((origin_element->avg_red-new_element->avg_red)*(origin_element->avg_red-new_element->avg_red)+(origin_element->avg_green-new_element->avg_green)*(origin_element->avg_green-new_element->avg_green)+(origin_element->avg_blue-new_element->avg_blue)*(origin_element->avg_blue-new_element->avg_blue));
-    return distance/no_of_cells_to_check;
+    if(distance/no_of_cells_to_check>color_sensitiviy /*|| count1>no_of_cells_to_check/2*/)
+    {   all_is_well=false;}
+    else
+    {   all_is_well=true;}
+
+    return all_is_well;
 }
 
 void image_package_class::search_for_neighbour(image_map_element* element,vector<vector<int>>* result)//color maper function//ok tested
@@ -91,7 +149,7 @@ void image_package_class::search_for_neighbour(image_map_element* element,vector
         new_row_index=row_index+delta_co_ordinates[a][0];
         if(new_col_index>=0 && new_row_index>=0 && new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size())
         {
-            if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance(element,image_map.at(new_row_index).at(new_col_index))<=color_sensitiviy)
+            if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance(element,image_map.at(new_row_index).at(new_col_index))==true)//<=color_sensitiviy
             //if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance2(element,image_map.at(new_row_index).at(new_col_index))>=percentage_of_close_pixels)
             {
                 co_ordinate.at(0)=new_row_index;
@@ -159,9 +217,9 @@ void image_package_class::create_color_maps()//color maper function//ok tested
             element->avg_blue=avg_color_in_slice(slice,'b');
             element->avg_green=avg_color_in_slice(slice,'g');
             element->avg_red=avg_color_in_slice(slice,'r');
-            //cout<<"\nstartx="<<startx<<" starty="<<starty<<", r="<<element.avg_red<<", g="<<element.avg_green<<", b="<<element.avg_blue;
-            //imshow("slice",*slice);
-            //waitKey(0);
+            
+            //element->avg_hue=avg_color_in_slice(slice,'h');
+
             slice->release();
             startx+=slice_row_size;
             map_row_temp.push_back(element);
@@ -226,6 +284,92 @@ void image_package_class::create_color_maps()//color maper function//ok tested
     }
 }
 
+/*void image_package_class::onMouse(int evt,int x,int y,int flags,void* param,void* userdata)
+{
+
+}*/
+void image_package_class::onMouse(int evt,int x,int y,int flags,void* param)
+{
+    if(evt==CV_EVENT_LBUTTONDOWN)
+    {
+        vector<Point>* ptPtr= (std::vector<cv::Point>*)param;
+        ptPtr->push_back(Point(x,y));
+    }
+}
+
+void image_package_class::second_stage_analyzer(Mat plot,int slice_size)
+{
+    vector<Point> points;
+    namedWindow("Output Window",WINDOW_NORMAL);
+    resizeWindow("Output Window",1920,1080);
+    setMouseCallback("Output Window",onMouse, (void*)&points);
+    int x,y;
+    int r_old=0,g_old=0,b_old=0,h_old=0;
+    while(1)
+    {
+        imshow("Output Window",plot);
+        if(points.size()>2)
+        {
+            for(auto it = points.begin();it!=points.end();it++)
+            {
+                cout<<"x and y coordinates are given below"<<endl;
+                cout<<(*it).x<<'\t'<<(*it).y;
+                int x_index=(*it).x/slice_size,y_index=(*it).y/slice_size;
+                int obj_index,id=image_map.at(y_index).at(x_index)->obj_id;
+                
+                for(int a=0;a<obj_vec.size();a++)
+                {
+                    if(obj_vec.at(a).at(0)->obj_id==id)
+                    {
+                        obj_index=a;
+                        break;
+                    }
+                }
+                int avg_r=0,avg_g=0,avg_b=0;
+                int a;
+                for(a=0;a<obj_vec.at(obj_index).size();a++)
+                {
+                    avg_r+=obj_vec.at(obj_index).at(a)->avg_red;
+                    avg_g+=obj_vec.at(obj_index).at(a)->avg_green;
+                    avg_b+=obj_vec.at(obj_index).at(a)->avg_blue;
+                }
+                avg_r=avg_r/a;
+                avg_g=avg_g/a;
+                avg_b=avg_b/a;
+                cout<<" red="<<avg_r;
+                cout<<" green="<<avg_g;
+                cout<<" blue="<<avg_b;
+                Mat hsv,conversion_mat=Mat(2,2,CV_8UC3);
+                for(int a=0;a<2;a++)
+                {
+                    for(int b=0;b<2;b++)
+                    {
+                        conversion_mat.at<Vec3b>(a,b)[2]=avg_r;
+                        conversion_mat.at<Vec3b>(a,b)[1]=avg_g;
+                        conversion_mat.at<Vec3b>(a,b)[0]=avg_b;
+                    }
+                }
+                cvtColor(conversion_mat,hsv,CV_BGR2HSV);
+                conversion_mat.release();
+                float avg_h=(int)hsv.at<Vec3b>(0,0)[0];
+                //avg_h=(avg_h/180.0)*255.0;//for only the unstrict layer
+                hsv.release();
+                float h_distance=hue_distance_calc(h_old,avg_h);
+                cout<<" hue="<<avg_h<<" h_dis="<<h_distance;
+                float distance=sqrt(pow((avg_r-r_old),2)+pow((avg_g-g_old),2)+pow((avg_b-b_old),2)+pow((h_distance),2));
+                r_old=avg_r;
+                g_old=avg_g;
+                b_old=avg_b;
+                h_old=avg_h;
+                cout<<" distance="<<distance<<endl;
+            }
+            if(points.size()>15)
+            {   points.erase(points.begin(),points.begin()+13);}
+        }
+        waitKey(10);
+    }
+}
+
 void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,vector<vector<image_map_element*>>* image_map1,string orig_img_path)//for testing create_color_maps() function//ok tested
 {
     cout<<"\nno_of_objects detected= "<<obj_vec_for_one_img->size();
@@ -271,6 +415,7 @@ void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_
     //img_name.push_back(',');
     //img_name.push_back(*to_string(slice_row_size).c_str());
     img_name.append(".png");
+    //second_stage_analyzer(obj_map_plotted,slice_row_size);//for testing
     imwrite(img_name.c_str(),obj_map_plotted);
     //imshow("obj_map",*orig_image_temp1);
     //waitKey(0);
@@ -390,7 +535,7 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
       the whole code again, but due to compiler bug the above 
       function is not working when called from here. */
     //detect the first bordel cell by brut force
-    /* 
+     
     //this below algorithm is the correct version of the further below algorithm but results of the one 
     image_map_element *border_element;
     int row_index_zero=obj->at(0)->row_index,column_index_zero=obj->at(0)->col_index,obj_id=obj->at(0)->obj_id;
@@ -402,7 +547,7 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
         current_row--;
     }
     border_element_vec->push_back(border_element);
-    */
+    /*
     image_map_element *border_element;
     for(int a=0;a<obj->size();a++)
     {
@@ -422,17 +567,27 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
         {   border_element=obj->at(a);break;}
     }
     border_element_vec->push_back(border_element);
-    
+    */
     //detect the  rest of the border elements
     int a=0;
     point1:
     int index_of_first_element_added=-1;
     bool new_element_added=false;
-    for(a;a<border_element_vec->size();a++)
+    for(;a<border_element_vec->size();a++)
     {
         for(int b=0;b<8;b++)
         {
+            //cout<<"\na="<<a;
+            //cout<<" size="<<border_element_vec->size();
+            //int vb1=border_element_vec->at(a)->col_index;
+            //int vb2=delta_co_ordinates[b][1];//border_element->
+            //cout<<"\nvc3="<<vb1<<" vb2="<<vb2;
+            //int vb3=vb1+vb2;
             new_col_index=border_element_vec->at(a)->col_index+delta_co_ordinates[b][1];
+            //int vc1=border_element_vec->at(a)->row_index;
+            //int vc2=delta_co_ordinates[b][0];
+            //cout<<"\nvc2="<<vc2<<" vc1="<<vc1;
+            //int vc3=vc1+vc2;
             new_row_index=border_element_vec->at(a)->row_index+delta_co_ordinates[b][0];
             if(new_col_index>=0 && new_row_index>=0 && 
                new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() && 
@@ -631,6 +786,11 @@ void image_package_class::obj_info_gatherer(int a,vector<obj_info> *obj_info_vec
     border_element_vec.clear();
     find_neighbouring_objs(&obj_vec.at(a),&obj_vec,list_of_neighbouring_objs,&border_element_vec);
     //calc the color distance
+    
+    int no_of_objs_to_be_checked=10;//new patch //10
+    if(no_of_objs_to_be_checked>list_of_obj_to_be_combined_ptr->size())
+    {   no_of_objs_to_be_checked=list_of_obj_to_be_combined_ptr->size();}
+
     for(int b=0;b<list_of_neighbouring_objs->size();b++)
     {
         for(int c=0;c<obj_info_vec->size();c++)
@@ -641,9 +801,40 @@ void image_package_class::obj_info_gatherer(int a,vector<obj_info> *obj_info_vec
                 int n_red=obj_info_vec->at(c).avg_red;
                 int n_green=obj_info_vec->at(c).avg_green;
                 int n_blue=obj_info_vec->at(c).avg_blue;
-                float color_distance_temp=(sqrt(pow((n_red-obj_info_vec->at(a).avg_red),2)+pow((n_green-obj_info_vec->at(a).avg_green),2)+pow((n_blue-obj_info_vec->at(a).avg_blue),2)));
-                if(color_distance_temp<=color_sensitivity2)
-                {   obj_info_vec->at(a).color_distance_of_each_obj.push_back(color_distance_temp);}
+                bool all_is_well=true;
+                //float color_distance_temp=(sqrt(pow((n_red-obj_info_vec->at(a).avg_red),2)+pow((n_green-obj_info_vec->at(a).avg_green),2)+pow((n_blue-obj_info_vec->at(a).avg_blue),2)));
+                float n_hue=obj_info_vec->at(c).avg_hue;
+                float color_distance_temp=sqrt(pow((n_red-obj_info_vec->at(a).avg_red),2)+pow((n_green-obj_info_vec->at(a).avg_green),2)+pow((n_blue-obj_info_vec->at(a).avg_blue),2)+pow((n_hue-obj_info_vec->at(a).avg_hue),2));
+                if(color_distance_temp>color_sensitivity2)
+                {   all_is_well=false;}
+                //if(abs(n_red-obj_info_vec->at(a).avg_red)<=color_sensitivity2 && abs(n_green-obj_info_vec->at(a).avg_green)<=color_sensitivity2 && abs(n_blue-obj_info_vec->at(a).avg_blue)<=color_sensitivity2)
+                //new patch start
+                int d;
+                for(d=list_of_obj_to_be_combined_ptr->size()-1;d>list_of_obj_to_be_combined_ptr->size()-no_of_objs_to_be_checked;d--)
+                {
+                    int index1;
+                    for(int e=0;e<obj_info_vec->size();e++)
+                    {
+                        if(obj_info_vec->at(e).obj_id==list_of_obj_to_be_combined_ptr->at(d).at(0)->obj_id)
+                        {   index1=e;break;}
+                    }
+                    n_red=obj_info_vec->at(index1).avg_red;
+                    n_green=obj_info_vec->at(index1).avg_green;
+                    n_blue=obj_info_vec->at(index1).avg_blue;
+                    //                 +
+                    //color_distance_temp=sqrt(pow((n_red-obj_info_vec->at(c).avg_red),2)+pow((n_green-obj_info_vec->at(c).avg_green),2)+pow((n_blue-obj_info_vec->at(c).avg_blue),2));
+                    n_hue=obj_info_vec->at(index1).avg_hue;
+                    color_distance_temp=sqrt(pow((n_red-obj_info_vec->at(c).avg_red),2)+pow((n_green-obj_info_vec->at(c).avg_green),2)+pow((n_blue-obj_info_vec->at(c).avg_blue),2)+pow((n_hue-obj_info_vec->at(c).avg_hue),2));
+                    if(color_distance_temp>color_sensitivity2)
+                    {   all_is_well=false;break;}
+                }
+                //color_distance_temp=color_distance_temp/(d+1);
+                //new patch end
+                //cout<<"\na="<<a<<" b="<<b<<" c="<<c;
+                //if(color_distance_temp<=color_sensitivity2)
+                if(all_is_well==true)
+                {   //cout<<"  combined";
+                    obj_info_vec->at(a).color_distance_of_each_obj.push_back(color_distance_temp);}
                 else
                 {
                     list_of_neighbouring_objs->erase(list_of_neighbouring_objs->begin()+b);
@@ -672,16 +863,38 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
         //calc avg rgb values for each obj
         obj1.obj_id=obj_vec.at(a).at(0)->obj_id;
         int red=0,green=0,blue=0;
+        float hue=0;
         int b=0;
         for(b=0;b<obj_vec.at(a).size();b++)
         {
             red+=obj_vec.at(a).at(b)->avg_red;
             green+=obj_vec.at(a).at(b)->avg_green;
             blue+=obj_vec.at(a).at(b)->avg_blue;
+            
+            Mat conversion_mat=Mat(2,2,CV_8UC3);
+            for(int c=0;c<2;c++)
+            {
+                for(int d=0;d<2;d++)
+                {
+                    conversion_mat.at<Vec3b>(c,d)[2]=obj_vec.at(a).at(b)->avg_red;
+                    conversion_mat.at<Vec3b>(c,d)[1]=obj_vec.at(a).at(b)->avg_green;
+                    conversion_mat.at<Vec3b>(c,d)[0]=obj_vec.at(a).at(b)->avg_blue;
+                }
+            }
+            Mat hsv;
+            cvtColor(conversion_mat,hsv,CV_BGR2HSV);
+            float hue_c=(int)hsv.at<Vec3b>(0,0)[0];
+            hue_c=(hue_c/180.0)*255.0;
+            conversion_mat.release();
+            //cout<<"\nhue_c="<<hue_c<<" r="<<obj_vec.at(a).at(b)->avg_red<<" g="<<obj_vec.at(a).at(b)->avg_green<<" b="<<obj_vec.at(a).at(b)->avg_blue;
+            hue+=hue_c;
         }
         obj1.avg_green=green/b;
         obj1.avg_red=red/b;
         obj1.avg_blue=blue/b;
+        
+        obj1.avg_hue=hue/b;
+        //cout<<"\nhue="<<obj1.avg_hue;
         obj_info_vec.push_back(obj1);
     }
    
@@ -699,6 +912,7 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
             list_of_neighbouring_objs_buffer.clear();
             vector<vector<image_map_element*>> list_of_obj_to_be_combined;//for holding the list of objects to be combined into one single object
             list_of_obj_to_be_combined.clear();
+            list_of_obj_to_be_combined_ptr=&list_of_obj_to_be_combined;
             //for the first obj
             obj_info_vec.at(a).select_status=true;           
             obj_info_vec.at(a).obj_id=obj_index;
@@ -782,335 +996,40 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
     obj_vec=new_obj_vec;
 }
 
-void image_package_class::contour_data_plotter()//ok tested
-{
-    contour_vec.clear();
-    vector<contour_map_element> contour_map_element_vec(orig_image_temp->cols);
-    contour_data_map.clear();
-    for(int b=0;b<orig_image_temp->rows;b++)
-    {   contour_data_map.push_back(contour_map_element_vec);}
-    for(int a=0;a<orig_img_contours.size();a++)
-    {
-        //plotting of each contours 
-        Mat contour_mat(orig_image_temp->rows,orig_image_temp->cols,CV_8UC3,Scalar(0,0,0));
-        drawContours(contour_mat,orig_img_contours,a,Scalar(255,255,255),1);
-        //finding the difference after and before plotting of the contours
-        int max_row=0,max_col=0,min_row=orig_img_contours.at(a).at(0).y,min_col=orig_img_contours.at(a).at(0).x;
-        for(int b=0;b<orig_img_contours.at(a).size();b++)
-        {
-            if(max_row<orig_img_contours.at(a).at(b).y)
-            {   max_row=orig_img_contours.at(a).at(b).y;}
-            if(max_col<orig_img_contours.at(a).at(b).x)
-            {   max_col=orig_img_contours.at(a).at(b).x;}
-            if(min_row>orig_img_contours.at(a).at(b).y)
-            {   min_row=orig_img_contours.at(a).at(b).y;}
-            if(min_col>orig_img_contours.at(a).at(b).x)
-            {   min_col=orig_img_contours.at(a).at(b).x;}
-        }
-        Mat ROI(contour_mat,Rect(min_col,min_row,(max_col-min_col+1),(max_row-min_row+1)));
-        contour_struct new_contour_struct;
-        new_contour_struct.contour_id=a+1;
-        int row_temp=-1,col_temp=-1;
-        for(int b=0;b<ROI.rows;b++)
-        {
-            for(int c=0;c<ROI.cols;c++)
-            {
-                if(((int)ROI.at<Vec3b>(b,c)[0])==255 /*&& ((int)ROI.at<Vec3b>(b,c)[1])==255 && ((int)ROI.at<Vec3b>(b,c)[2])==255*/)
-                {
-                    new_contour_struct.contour_count++;//counter counter
-                    contour_data_map.at(b+min_row).at(c+min_col).contour_status=true;
-                    contour_data_map.at(b+min_row).at(c+min_col).contour_id=a+1;
-                    bool found=false;
-                    for(int d=0;d<new_contour_struct.contourelement_vec.size();d++)
-                    {
-                        if(new_contour_struct.contourelement_vec.at(d)->row_index==((b+min_row)/slice_row_size) && 
-                           new_contour_struct.contourelement_vec.at(d)->col_index==((c+min_col)/slice_col_size))
-                           {    found=true;}
-                    }
-                    if(found==false)
-                    {   new_contour_struct.contourelement_vec.push_back(image_map.at((b+min_row)/slice_row_size).at((c+min_col)/slice_col_size));}
-                }
-            }
-        }
-        contour_vec.push_back(new_contour_struct);
-        ROI.release();
-        contour_mat.release();
-    }
-    total_no_of_contours=orig_img_contours.size();
-    orig_img_contours.clear();
-    orig_img_heirachy.clear();
-}
-
-void image_package_class::check_contour_status_under_an_element(vector<vector<int>>* contour_statistics,int obj_index,int row_index,int col_index,bool *partially_conflict_status)//ok tested
-{
-    int orig_row_index=image_map.at(row_index).at(col_index)->row_index*slice_row_size;
-    int orig_col_index=image_map.at(row_index).at(col_index)->col_index*slice_col_size;
-    int no_of_contour_elements_present=0;
-    int srs=slice_row_size,rs=contour_data_map.size(),cs=contour_data_map[0].size();
-    int previous_contour_id=0;
-    for(int a=0;a<slice_row_size;a++)
-    {
-        for(int b=0;b<slice_col_size;b++)
-        {
-            if(contour_data_map.at(a+orig_row_index).at(b+orig_col_index).contour_status==true)
-            {   
-                if(previous_contour_id==0 || previous_contour_id!=contour_data_map.at(a+orig_row_index).at(b+orig_col_index).contour_id)
-                {   
-                    no_of_contour_elements_present++;
-                    previous_contour_id=contour_data_map.at(a+orig_row_index).at(b+orig_col_index).contour_id;
-                }
-                bool found=false;
-                for(int c=0;c<contour_statistics->size();c++)
-                {
-                    if(contour_data_map.at(a+orig_row_index).at(b+orig_col_index).contour_id==contour_statistics->at(c).at(0))
-                    {   contour_statistics->at(c).at(1)++;found=true;}
-                }
-                if(found==false)
-                {
-                    vector<int> contour_info(2);
-                    contour_info.at(0)=contour_data_map.at(a+orig_row_index).at(b+orig_col_index).contour_id;
-                    contour_info.at(1)=1;
-                    contour_statistics->push_back(contour_info);
-                }
-            }
-        }
-    }
-    if(no_of_contour_elements_present==1)
-    {   (*partially_conflict_status)=true;}//this means partially conflict
-    else
-    {   (*partially_conflict_status)=false;}//this means fully conflict 
-}
-
-void image_package_class::border_differentiator()//ok tested
-{
-    //non conflict border filter
-    vector<image_map_element*> non_conflict_border_elements;
-    vector<image_map_element*> conflict_border_elements;
-    vector<vector<int>> contour_info_vec;//holds contour id data and the no of times the elements the contour shares with the border 
-    for(int a=0;a<obj_vec.size();a++)
-    {
-        non_conflict_border_elements.clear();
-        conflict_border_elements.clear();
-        contour_info_vec.clear();
-        for(int b=0;b<border_element_vec.at(a).size();b++)
-        {
-            bool partially_conflict_status;
-            check_contour_status_under_an_element(&contour_info_vec,a,border_element_vec.at(a).at(b)->row_index,border_element_vec.at(a).at(b)->col_index,&partially_conflict_status);
-            if(partially_conflict_status==true)
-            {   non_conflict_border_elements.push_back(border_element_vec.at(a).at(b));}
-            else
-            {   conflict_border_elements.push_back(border_element_vec.at(a).at(b));}               
-        }
-        non_conflict_border_elements_vec.push_back(non_conflict_border_elements);
-        conflict_border_elements_vec.push_back(conflict_border_elements);
-        //contour_info_vec_vec.push_back(contour_info_vec);
-    }
-}
-
-void image_package_class::border_plotter(vector<vector<image_map_element*>>* border)//this function is for testing purpose only.
-{
-    Mat test(orig_image_temp->rows,orig_image_temp->cols,CV_8UC3,Scalar(0,0,0));
-    vector<int> r_g_b(3);
-    vector<vector<int>> rgb_vec;
-    for(int a=0;a<total_no_of_contours;a++)
-    {
-        int rand_red=rand()%255+0,rand_green=rand()%255+0,rand_blue=rand()%255+0;    
-        r_g_b[0]=rand_red;
-        r_g_b[1]=rand_green;
-        r_g_b[2]=rand_blue;
-        rgb_vec.push_back(r_g_b);
-    }
-    for(int a=0;a<border_element_vec.size();a++)
-    {  
-        //cout<<"\nobj="<<border_element_vec.size()<<" non_con="<<border->size();
-        //int ghj;cin>>ghj;
-        //Mat test(orig_image_temp->rows,orig_image_temp->cols,CV_8UC3,Scalar(0,0,0));
-        for(int b=0;b<border->at(a).size();b++)
-        {
-            int orig_row_index=border->at(a).at(b)->row_index*slice_row_size,orig_col_index=border->at(a).at(b)->col_index*slice_col_size;
-            bool stop=false;
-            int id;
-            for(int c=0;c<slice_row_size;c++)
-            {
-                for(int d=0;d<slice_col_size;d++)
-                {
-                    if(contour_data_map.at(c+orig_row_index).at(d+orig_col_index).contour_status==true)
-                    {
-                        id=contour_data_map.at(c+orig_row_index).at(d+orig_col_index).contour_id;
-                        stop=true;
-                        break;
-                    }
-                }
-                if(stop==true)
-                {   break;}
-            }
-
-            int red2=rgb_vec[id-1][0],green2=rgb_vec[id-1][1],blue2=rgb_vec[id-1][2];
-            for(int c=0;c<slice_row_size;c++)
-            {
-                for(int d=0;d<slice_col_size;d++)
-                {
-                    test.at<Vec3b>((c+orig_row_index),(d+orig_col_index))[0]=blue2;
-                    test.at<Vec3b>((c+orig_row_index),(d+orig_col_index))[1]=green2;
-                    test.at<Vec3b>((c+orig_row_index),(d+orig_col_index))[2]=red2;
-                }
-            }
-        }
-        //test
-        /*cout<<"\n\n";
-        for(int b=0;b<conflict_border_elements_vec.at(a).size();b++)
-        {
-            cout<<"\nid="<<conflict_border_elements_vec.at(a).at(b)->id_of_contours_present_under_the_slice.size();
-        }*/
-        //imshow("test",test);
-        //test.release();
-        //waitKey(0);
-        //int gh;cin>>gh;  
-    }
-    //int gh;cin>>gh;
-    imshow("test",test);
-    waitKey(0);
-    test.release();   
-}
-
-void image_package_class::get_contour_ids_under_a_slice(image_map_element* slice,vector<int>* id_vec)//need testing
-{
-    id_vec->clear();
-    int orig_row_index=slice->row_index*slice_row_size,orig_col_index=slice->col_index*slice_col_size;
-    for(int a=0;a<slice_row_size;a++)
-    {
-        for(int b=0;b<slice_col_size;b++)
-        {
-            if(orig_row_index+a<contour_data_map.size() && orig_col_index+b<contour_data_map.at(orig_row_index+a).size() && 
-               contour_data_map.at(orig_row_index+a).at(orig_col_index+b).contour_status==true)
-            {   id_vec->push_back(contour_data_map.at(orig_row_index+a).at(orig_col_index+b).contour_id);}
-        }
-    }
-}
-
-void image_package_class::prominient_border_finder()//ok tested
-{
-    vector<int> prominient_contour_id_for_one_obj;
-    vector<vector<int>> contour_counter_for_obj;
-    vector<int> id_vec;
-    for(int a=0;a<obj_vec.size();a++)//for each obj
-    {
-        contour_counter_for_obj.clear();
-        //contour statistics collection for each obj
-        for(int b=0;b<non_conflict_border_elements_vec.at(a).size();b++)//for each slice
-        {
-            get_contour_ids_under_a_slice(non_conflict_border_elements_vec.at(a).at(b),&id_vec);
-            for(int c=0;c<id_vec.size();c++)//for id vectors present under the slice
-            {
-                bool found=false;
-                for(int d=0;d<contour_counter_for_obj.size();d++)// for contour_counter_for_obj 
-                {
-                    if(id_vec.at(c)==contour_counter_for_obj.at(d).at(0))
-                    {
-                        found=true;
-                        contour_counter_for_obj.at(d).at(1)++;
-                        break;
-                    }
-                }
-                if(found==false)
-                {
-                    vector<int> contour_counter_element(2);
-                    contour_counter_element.at(0)=id_vec.at(c);
-                    contour_counter_element.at(1)=1;
-                    contour_counter_for_obj.push_back(contour_counter_element);
-                }
-            }
-        }
-
-        for(int b=0;b<conflict_border_elements_vec.at(a).size();b++)
-        {
-            get_contour_ids_under_a_slice(conflict_border_elements_vec.at(a).at(b),&id_vec);
-            for(int c=0;c<id_vec.size();c++)//for id vectors present under the slice
-            {
-                bool found=false;
-                for(int d=0;d<contour_counter_for_obj.size();d++)// for contour_counter_for_obj 
-                {
-                    if(id_vec.at(c)==contour_counter_for_obj.at(d).at(0))
-                    {
-                        found=true;
-                        contour_counter_for_obj.at(d).at(1)++;
-                        break;
-                    }
-                }
-                if(found==false)
-                {
-                    vector<int> contour_counter_element(2);
-                    contour_counter_element.at(0)=id_vec.at(c);
-                    contour_counter_element.at(1)=1;
-                    contour_counter_for_obj.push_back(contour_counter_element);
-                }
-            }
-        }
-        //prominient contour finder
-        prominient_contour_id_for_one_obj.clear();
-        for(int b=0;b<contour_counter_for_obj.size();b++)
-        {
-            for(int c=0;c<contour_vec.size();c++)
-            {
-                if(contour_counter_for_obj.at(b).at(0)==contour_vec.at(c).contour_id)
-                {
-                    if((((float)contour_counter_for_obj.at(b).at(1))/((float)contour_vec.at(c).contour_count))>0.30)
-                    {   prominient_contour_id_for_one_obj.push_back(contour_counter_for_obj.at(b).at(0));
-                        //cout<<"\ncontour_counter_for_obj.at(b).at(1)="<<contour_counter_for_obj.at(b).at(1)<<" contour_info_vec_vec.at(a).at(c).at(1)="<<contour_vec.at(c).contour_count;
-                        //int gh;cin>>gh;
-                    }
-                    break;
-                }
-            }
-        }
-        for(int b=0;b<prominient_contour_id_for_one_obj.size();b++)
-        {
-            bool found=false;
-            for(int c=0;c<prominient_contour_id.size();c++)
-            {
-                if(prominient_contour_id_for_one_obj.at(b)==prominient_contour_id.at(c))
-                {   found=true;break;}
-            }
-            if(found==false)
-            {   prominient_contour_id.push_back(prominient_contour_id_for_one_obj.at(b));}
-        }
-        //adding the rest of the contour containing slices to the border
-        for(int b=0;b<prominient_contour_id_for_one_obj.size();b++)
-        {
-            for(int c=0;c<contour_vec.size();c++)
-            {
-                if(contour_vec.at(c).contour_id==prominient_contour_id_for_one_obj.at(b))
-                {
-                    non_conflict_border_elements_vec.at(a).insert(non_conflict_border_elements_vec.at(a).begin(),contour_vec.at(c).contourelement_vec.begin(),contour_vec.at(c).contourelement_vec.end());
-                    for(int d=conflict_border_elements_vec.at(a).size()-1;d>=0;d--)
-                    {   
-                        if(conflict_border_elements_vec.at(a).at(d)->obj_id==contour_vec.at(c).contour_id)
-                        {
-                            conflict_border_elements_vec.at(a).erase(conflict_border_elements_vec.at(a).begin()+d);
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-        prominient_contour_id_for_one_obj.clear();
-    }
-}
-
-void image_package_class::border_finder()//under construction
-{
-    contour_data_plotter();
-    border_differentiator();
-    //border_plotter(&conflict_border_elements_vec);
-    prominient_border_finder();
-    border_plotter(&non_conflict_border_elements_vec);
-}
-
 void image_package_class::data_preparation_for_border_finder()//ok tested
 {   
+    //sobel edge detector
+    Mat sobel_mat,src_gray;
+    GaussianBlur(*orig_image_temp,src_gray, Size(3,3), 0, 0, BORDER_DEFAULT );
+    cvtColor(src_gray,src_gray,COLOR_BGR2GRAY);
+    int scale = 1;
+    int delta = 0;
+    int ddepth = CV_16S;
+    Mat grad_x, grad_y;
+    Mat abs_grad_x, abs_grad_y;
+    Scharr( src_gray, grad_x, ddepth, 1, 0, scale, delta, BORDER_DEFAULT );
+    Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
+    Scharr( src_gray, grad_y, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );
+    Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
+    convertScaleAbs( grad_x, abs_grad_x );
+    convertScaleAbs( grad_y, abs_grad_y );
+    addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, sobel_mat );
+    src_gray.release();
+    grad_x.release();
+    grad_y.release();
+    abs_grad_x.release();
+    abs_grad_y.release();
+    imshow("sobel",sobel_mat);
+    waitKey(0);
+    int gh;cin>>gh;
+    for(int a=0;a<obj_vec.size();a++)
+    {
+
+    }
+
+    /*
     //border elements collection and buffer area creator
     vector<image_map_element*> border_elements;
-    obj_buffer_area.clear();
     border_element_vec.clear();
     for(int a=0;a<obj_vec.size();a++)
     {
@@ -1130,8 +1049,10 @@ void image_package_class::data_preparation_for_border_finder()//ok tested
     orig_img_heirachy.clear();
     cv::findContours(*canny_edge_temp,orig_img_contours,orig_img_heirachy,CV_RETR_TREE,CV_CHAIN_APPROX_SIMPLE,Point(0,0));
     orig_img_gray.release();
+    //imgpath.append(".jpg");
+    //imwrite(imgpath.c_str(),*canny_edge_temp);//for testing
     canny_edge_temp->release();
-    //cout<<"\n\n\n\nobj_vec="<<obj_vec.size()<<" buffer="<<obj_buffer_area.size();int gh;cin>>gh;
+    */
 }
 
 void image_package_class::start_data_preparation_process()
@@ -1139,15 +1060,47 @@ void image_package_class::start_data_preparation_process()
     clean_up_prepared_data_obj();
     for(unsigned int a=0;a<image_paths.size();a++)
     {
+        //cout<<"\npreprocessing going on...";
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
+        vector<Mat> channels;
+        cvtColor(*orig_image_temp,*orig_image_temp,CV_BGR2HSV);
+        split(*orig_image_temp,channels);
+        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
+        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
+        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
+        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
+
+        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
+        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
+        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
+
+        merge(channels,*orig_image_temp);
+        cvtColor(*orig_image_temp,*orig_image_temp,COLOR_HSV2BGR);
+        channels[0].release();
+        channels[1].release();
+        channels[2].release();
+        channels.clear();
+        //Mat out_img;
+        //bilateralFilter(*orig_image_temp,out_img,20,135,135,BORDER_DEFAULT);
+        //*orig_image_temp=out_img;
+        imgpath=image_paths[a];//for border plotter
+        //cout<<"\npath= "<<image_paths[a];
         //data preparation step 1
+        //cout<<"\ncolor mapping...";
         create_color_maps();
+        //cout<<"\nstrict process...";
         similar_obj_combination_process_strict();//no data leakage till here
+        
+        //cout<<"\ntesting...........";
+        //plot_obj_maps(&obj_vec,&image_map,image_paths[a]);
+
+
+        //cout<<"\nunstrict process...";
         similar_obj_combinarion_process_un_strict();//leakage fixed
         //data preparation step 2
-        data_preparation_for_border_finder();
-        border_finder();
+        //data_preparation_for_border_finder();
+        //border_finder();
         //data preparation step 3
         border_info_extractor();
         //data preparation step 4
@@ -1155,9 +1108,24 @@ void image_package_class::start_data_preparation_process()
         orig_image_temp->release();
 
         save_current_img_data();
+        clean_image_package_class_entierly();
         //cout<<"\ndone!!!!";
         //int gh;cin>>gh;
     }
+}
+
+void image_package_class::clean_image_package_class_entierly()
+{
+    contour_vec.clear();
+    prominient_contour_id.clear();
+    conflict_border_elements_vec.clear();
+    non_conflict_border_elements_vec.clear();
+    contour_data_map.clear();
+    orig_img_heirachy.clear();
+    orig_img_contours.clear();
+    border_element_vec.clear();
+    obj_vec.clear();
+    image_map.clear();
 }
 
 void image_package_class::save_current_img_data()
@@ -1184,6 +1152,7 @@ void image_package_class::enter_image_metadata(string img_name,string img_path)
 {   
     image_file_name.push_back(img_name);
     image_paths.push_back(img_path);
+    //cout<<"\npath="<<img_path;
 }
 
 void image_package_class::enter_image_metadata(int id_,string label_,string dir_path_)

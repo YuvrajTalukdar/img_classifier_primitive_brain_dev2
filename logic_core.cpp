@@ -60,9 +60,14 @@ bool logic_core::read_image_data()
     ifstream stream1("image_data/dataset_table.csv",ios::in);
     string line;
     stream1>>line;
+    cout<<"\nline1="<<line;
     stream1>>line;
+    cout<<"\nline2="<<line;
     while(stream1)
     {
+        string line2;
+        stream1>>line2;
+        line=line2;
         if(stream1.eof())
         {   break;}
         char line_arr[line.length()],ch[2];
@@ -70,8 +75,6 @@ bool logic_core::read_image_data()
 	    {   line_arr[a]='\0';}	
 
         int word_index=0;
-        
-        stream1>>line;
         if(stream1.eof())
         {   break;}	
         
@@ -82,13 +85,13 @@ bool logic_core::read_image_data()
         for(int a=0;a<line.length();a++)
         {    
             if(line.at(a)==',')
-            {
+            { 
                 word_index++;
                 if(word_index==1)
                 {   id_temp=atoi(line_arr);}
                 else if(word_index==2)
                 {   label_temp.assign(line_arr);}
-                else if(word_index==3)
+                else if(word_index==3) 
                 {   dir_path_temp.assign(line_arr);}
                 for(int b=0;b<line.length();b++)
                 {   line_arr[b]='\0';}
@@ -98,7 +101,7 @@ bool logic_core::read_image_data()
             ch[1]='\0';
             strcat(line_arr,ch);
         }
-        line.clear();
+        //cout<<"\ndir_vec="<<dir_path_temp.c_str()<<" name="<<label_temp.c_str()<<" line="<<line.c_str();
         dataset_table_obj_address=new image_package_class(id_temp,label_temp,dir_path_temp);
         image_package_vec.push_back(dataset_table_obj_address);  
     }
@@ -125,8 +128,8 @@ bool logic_core::read_image_data()
         //cout<<"\n\nlabel dir= "<<image_package_vec[a].dir_path;//display data
         int b=0;
         string label_data_path=image_package_vec[a]->return_dir_path();
-        label_data_path.erase(label_data_path.begin()+label_data_path.length()-1);
-    	while((de = readdir(dir_vec[a]))!=NULL)
+        label_data_path.erase(label_data_path.begin()+label_data_path.length()-1);//removing .
+        while((de = readdir(dir_vec[a]))!=NULL)
 	    {
 	        if(b>1)
             {	
@@ -157,10 +160,10 @@ void logic_core::train_segment(vector<core_class> &core_vec)
     for(int a=0;a<image_package_vec.size();a++)
     {
         img_data_preparation_process_handler* obj1=new img_data_preparation_process_handler();
-        obj1->color_sensitivity=10;//for the color mapper
-        obj1->color_sensitivity2=30;//30//for un strict combination
+        obj1->color_sensitivity=8;//12,8,10 for the color mapper
+        obj1->color_sensitivity2=40;//40,25,10//for un strict combination
         obj1->no_of_sq_areas_need_to_be_checked_for_avg_color=5;//value for testing
-        obj1->min_size_of_obj=40;
+        obj1->min_size_of_obj=40;//40
         obj1->obj=image_package_vec[a];
         img_data_preparation_process_handler_vec.push_back(obj1);
     }

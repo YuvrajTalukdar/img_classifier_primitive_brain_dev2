@@ -110,15 +110,16 @@ class image_package_class
         unsigned int row_index,col_index;
         int obj_id=-1;
         bool select_status=false;
+        bool non_conflict_border_element=false;
         int avg_red,avg_green,avg_blue;
-        //vector<int> id_of_contours_present_under_the_slice;
-        //vector<vector<int>> co_ordinates_of_contour_elements;//co-ordinates are placed in same order as that of id_of_contours_present_under_the_slice.
+
+        //int avg_hue;
     };
     //these are data vector for ONLY one image.
     vector<vector<image_map_element*>> image_map;//the main img map
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
     vector<vector<image_map_element*>> border_element_vec;//border elements of each obj without the buffer area
-    vector<vector<image_map_element*>> obj_buffer_area;//buffer area data of each obj stored in order as that of obj_vec.
+
     vector<vector<Point>> orig_img_contours;
     vector<Vec4i> orig_img_heirachy;
     int total_no_of_contours;
@@ -132,7 +133,7 @@ class image_package_class
         //output from the border differentiator
     vector<vector<image_map_element*>> non_conflict_border_elements_vec;
     vector<vector<image_map_element*>> conflict_border_elements_vec;
-    //vector<vector<vector<int>>> contour_info_vec_vec;//no of contours elements of each type in each obj
+    string imgpath;//for border plotter
     //output from the prominient_border_finder
     vector<int> prominient_contour_id; //format [id][prominiency status] 1=prominient 0= not prominient. This is ment for the entire image not a single obj.
     struct contour_struct
@@ -150,7 +151,7 @@ class image_package_class
     //temporary variables
     Mat* orig_image_temp;
        //for canny edge detector
-        int lowThreshold=50;//30
+        int lowThreshold=50;//50
         int ratio=3,kernel_size=3;
         int no_of_slices_row_wise,no_of_slices_col_wise;
     //meta data
@@ -178,19 +179,13 @@ class image_package_class
 
     void border_info_extractor();
         //data preparation step 2
-    void border_plotter(vector<vector<image_map_element*>>* border);//this is a testing function
-    
-    void get_contour_ids_under_a_slice(image_map_element* slice,vector<int>* id_vec);//need testing
-    void prominient_border_finder();//ok tested
-    void check_contour_status_under_an_element(vector<vector<int>>* contour_statistics,int obj_index,int row_index,int col_index,bool *partially_conflict_status);//may need improvement
-    void border_differentiator();//ok tested
-    void contour_data_plotter();//ok tested
-    void border_finder();//under construction
+   
     void data_preparation_for_border_finder();//ok tested
         //data preparation step 1 
     struct obj_info
     {   
         int avg_red,avg_green,avg_blue,obj_id;
+        float avg_hue;
         vector<float> color_distance_of_each_obj;
         int index_of_the_smallest_distance,obj_id_with_smallest_distance;
         float smallest_distance;
@@ -199,6 +194,7 @@ class image_package_class
     void obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs);//ok tested
     //similar obj combination process un-strict
     void similar_obj_combinarion_process_un_strict();//ok tested
+    vector<vector<image_map_element*>>* list_of_obj_to_be_combined_ptr;
     //similar object combination process strict
     int find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec);//ok tested
     bool check_if_element_is_border_element(image_map_element* element);//ok tested
@@ -212,17 +208,24 @@ class image_package_class
     void similar_obj_combination_process_strict();//ok testing
     //object mapping proceess functions
     int avg_color_in_slice(Mat* slice,char color);//color maper function//ok tested  
-    float color_distance2(image_map_element* origin_element,image_map_element* new_element);//new method for calculating color distance //tested poor result than its counterpart
     vector<image_map_element*> *obj_elements_vec_ptr;//required for the color distance calculator
-    float color_distance(image_map_element* origin_element,image_map_element* new_element);//color maper function//ok tested
+    float hue_distance_calc(float hi,float h2);
+    bool color_distance(image_map_element* origin_element,image_map_element* new_element);//color maper function//ok tested
     void search_for_neighbour(image_map_element* element,vector<vector<int>>* result);//color maper function//ok tested
     void remove_non_free_elements(vector<vector<int>>* result);//color maper function//ok tested
     void create_color_maps();//color maper function//ok tested
+    
+    //testing functions
+    //static void onMouse(int evt,int x,int y,int flags,void* param,void* userdata);
+    static void onMouse(int evt,int x,int y,int flags,void* param);
+    void second_stage_analyzer(Mat plot,int slice_size);
     void plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,vector<vector<image_map_element*>>* image_map1,string orig_img_path);//for testing create_color_maps() function
+    
     //data preparation process handler function
     void start_data_preparation_process();
     void clean_up_prepared_data_obj();
     void save_current_img_data();
+    void clean_image_package_class_entierly();
     //meta data functions
     void enter_image_metadata(string img_name,string img_path);
     void enter_image_metadata(int id_,string label_,string dir_path_);
