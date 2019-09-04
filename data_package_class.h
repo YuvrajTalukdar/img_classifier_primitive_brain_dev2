@@ -64,38 +64,10 @@ struct filtered_data //its fot the filtered data used in the core class
     string str;
     int label;
 };
-//image data classes and structures 
-struct image_pixel_data//for testing //old code
-{
-    vector<vector<int>> red_pix;
-    vector<vector<int>> green_pix;
-    vector<vector<int>> blue_pix;
-};
-
-struct image_slice_data //old code 
-{
-    bool canny_edge_data_available=false;
-    data_package_class *value_slices=new data_package_class();
-    data_package_class *satturation_slices=new data_package_class();
-    data_package_class *hue_slices=new data_package_class();
-    data_package_class *canny_edge_slices=new data_package_class();
-};
 
 class image_package_class
 {
     private:
-    //canny edge slicer operations data
-        //threshold
-    //float base_line=0.05;
-    //other operation data
-    //vector<Mat*> mat_vec;
-    //vector<image_pixel_data*> full_image_pixel_vec;
-    //image_slice_data* isd_pack=new image_slice_data();
-    //above(within the class) are the old pieces of code
-   
-
-
-
     //package locking mechanism
     bool lock_enabled=false;
     //critial variables used in data preparation process
@@ -120,29 +92,10 @@ class image_package_class
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
     vector<vector<image_map_element*>> border_element_vec;//border elements of each obj without the buffer area
 
-    vector<vector<Point>> orig_img_contours;
-    vector<Vec4i> orig_img_heirachy;
-    int total_no_of_contours;
-    struct contour_map_element
-    {
-        bool contour_status=false;
-        int contour_id=-1;
-        //more stuff will be included
-    };
-    vector<vector<contour_map_element>> contour_data_map;//map of the contour data
         //output from the border differentiator
-    vector<vector<image_map_element*>> non_conflict_border_elements_vec;
-    vector<vector<image_map_element*>> conflict_border_elements_vec;
     string imgpath;//for border plotter
     //output from the prominient_border_finder
-    vector<int> prominient_contour_id; //format [id][prominiency status] 1=prominient 0= not prominient. This is ment for the entire image not a single obj.
-    struct contour_struct
-    {
-        int contour_id;
-        int contour_count=0;
-        vector<image_map_element*> contourelement_vec;
-    };
-    vector<contour_struct> contour_vec;//contour data stored 
+    
     struct prepared_data
     {
         vector<vector<vector<image_map_element*>>> image_map_vec;
@@ -220,12 +173,13 @@ class image_package_class
     static void onMouse(int evt,int x,int y,int flags,void* param);
     void second_stage_analyzer(Mat plot,int slice_size);
     void plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,vector<vector<image_map_element*>>* image_map1,string orig_img_path);//for testing create_color_maps() function
-    
+    long double memory_stats();//gives the details of how much each variable is occupying memory.
+
     //data preparation process handler function
     void start_data_preparation_process();
     void clean_up_prepared_data_obj();
     void save_current_img_data();
-    void clean_image_package_class_entierly();
+    void clean_image_package_class_entierly(bool clean_prepared_data);
     //meta data functions
     void enter_image_metadata(string img_name,string img_path);
     void enter_image_metadata(int id_,string label_,string dir_path_);

@@ -98,6 +98,7 @@ bool image_package_class::color_distance(image_map_element* origin_element,image
         //       +
         //distance=sqrt(pow((obj_elements_vec_ptr->at(a)->avg_red-new_element->avg_red),2)+pow((obj_elements_vec_ptr->at(a)->avg_green-new_element->avg_green),2)+pow((obj_elements_vec_ptr->at(a)->avg_blue-new_element->avg_blue),2)+pow((((int)hsv1.at<Vec3b>(0,0)[0])-((int)hsv2.at<Vec3b>(0,0)[0])),2));
         float hue_distance=hue_distance_calc(((int)hsv1.at<Vec3b>(0,0)[0]),((int)hsv2.at<Vec3b>(0,0)[0]));
+        //hue_distance=hue_distance*5;
         hue_distance=(hue_distance/180.0)*255.0;
         //float value_distance=abs(((int)hsv1.at<Vec3b>(0,0)[2])-((int)hsv2.at<Vec3b>(0,0)[2]));
         //if(hue_distance<=25)
@@ -221,6 +222,7 @@ void image_package_class::create_color_maps()//color maper function//ok tested
             //element->avg_hue=avg_color_in_slice(slice,'h');
 
             slice->release();
+            delete slice;
             startx+=slice_row_size;
             map_row_temp.push_back(element);
         }
@@ -419,12 +421,13 @@ void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_
     imwrite(img_name.c_str(),obj_map_plotted);
     //imshow("obj_map",*orig_image_temp1);
     //waitKey(0);
+    orig_image_temp1->release();
+    delete orig_image_temp1;
     cout<<"\ncols="<<obj_map_plotted.cols<<" rows="<<obj_map_plotted.rows;
     //int gh;cin>>gh;
     //imshow("obj_map",obj_map_plotted);
     //waitKey(0);
     obj_map_plotted.release();
-    orig_image_temp->release();
 }
 
 bool image_package_class::check_if_element_is_border_element(image_map_element* element)
@@ -998,61 +1001,7 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
 
 void image_package_class::data_preparation_for_border_finder()//ok tested
 {   
-    //sobel edge detector
-    Mat sobel_mat,src_gray;
-    GaussianBlur(*orig_image_temp,src_gray, Size(3,3), 0, 0, BORDER_DEFAULT );
-    cvtColor(src_gray,src_gray,COLOR_BGR2GRAY);
-    int scale = 1;
-    int delta = 0;
-    int ddepth = CV_16S;
-    Mat grad_x, grad_y;
-    Mat abs_grad_x, abs_grad_y;
-    Scharr( src_gray, grad_x, ddepth, 1, 0, scale, delta, BORDER_DEFAULT );
-    Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
-    Scharr( src_gray, grad_y, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );
-    Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
-    convertScaleAbs( grad_x, abs_grad_x );
-    convertScaleAbs( grad_y, abs_grad_y );
-    addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, sobel_mat );
-    src_gray.release();
-    grad_x.release();
-    grad_y.release();
-    abs_grad_x.release();
-    abs_grad_y.release();
-    imshow("sobel",sobel_mat);
-    waitKey(0);
-    int gh;cin>>gh;
-    for(int a=0;a<obj_vec.size();a++)
-    {
-
-    }
-
-    /*
-    //border elements collection and buffer area creator
-    vector<image_map_element*> border_elements;
-    border_element_vec.clear();
-    for(int a=0;a<obj_vec.size();a++)
-    {
-        border_elements.clear();
-        find_obj_border_elements(&obj_vec.at(a),&border_elements);
-        //buffer_area_finder(&border_elements);
-        border_element_vec.push_back(border_elements);
-    }
-    //canny edge detector
-    Mat* canny_edge_temp;
-    canny_edge_temp=new Mat(orig_image_temp->cols,orig_image_temp->rows,CV_8UC3,Scalar(0,0,0));
-    Mat orig_img_gray;
-    cvtColor(*orig_image_temp,orig_img_gray,CV_BGR2GRAY);
-    blur(orig_img_gray,*canny_edge_temp,Size(kernel_size,kernel_size));
-    Canny(*canny_edge_temp,*canny_edge_temp,lowThreshold,lowThreshold*ratio,kernel_size);
-    orig_img_contours.clear();
-    orig_img_heirachy.clear();
-    cv::findContours(*canny_edge_temp,orig_img_contours,orig_img_heirachy,CV_RETR_TREE,CV_CHAIN_APPROX_SIMPLE,Point(0,0));
-    orig_img_gray.release();
-    //imgpath.append(".jpg");
-    //imwrite(imgpath.c_str(),*canny_edge_temp);//for testing
-    canny_edge_temp->release();
-    */
+    
 }
 
 void image_package_class::start_data_preparation_process()
@@ -1060,7 +1009,9 @@ void image_package_class::start_data_preparation_process()
     clean_up_prepared_data_obj();
     for(unsigned int a=0;a<image_paths.size();a++)
     {
+        cout<<"\npath="<<image_paths[a];
         //cout<<"\npreprocessing going on...";
+        //int gh;cin>>gh;
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
         vector<Mat> channels;
@@ -1081,51 +1032,55 @@ void image_package_class::start_data_preparation_process()
         channels[1].release();
         channels[2].release();
         channels.clear();
-        //Mat out_img;
-        //bilateralFilter(*orig_image_temp,out_img,20,135,135,BORDER_DEFAULT);
-        //*orig_image_temp=out_img;
+        
         imgpath=image_paths[a];//for border plotter
-        //cout<<"\npath= "<<image_paths[a];
         //data preparation step 1
         //cout<<"\ncolor mapping...";
+        //cin>>gh;
         create_color_maps();
         //cout<<"\nstrict process...";
+        //cin>>gh;
         similar_obj_combination_process_strict();//no data leakage till here
         
         //cout<<"\ntesting...........";
         //plot_obj_maps(&obj_vec,&image_map,image_paths[a]);
 
-
         //cout<<"\nunstrict process...";
+        //cin>>gh;
         similar_obj_combinarion_process_un_strict();//leakage fixed
         //data preparation step 2
         //data_preparation_for_border_finder();
-        //border_finder();
         //data preparation step 3
         border_info_extractor();
         //data preparation step 4
         data_arranger();
         orig_image_temp->release();
-
-        save_current_img_data();
-        clean_image_package_class_entierly();
-        //cout<<"\ndone!!!!";
+        delete orig_image_temp;
+        //save_current_img_data();//this function is not used currently but will be used once the final result is arrived
+        plot_obj_maps(&obj_vec,&image_map,image_paths.at(a));
+        clean_image_package_class_entierly(true);
         //int gh;cin>>gh;
     }
 }
 
-void image_package_class::clean_image_package_class_entierly()
+void image_package_class::clean_image_package_class_entierly(bool clean_prepared_data)
 {
-    contour_vec.clear();
-    prominient_contour_id.clear();
-    conflict_border_elements_vec.clear();
-    non_conflict_border_elements_vec.clear();
-    contour_data_map.clear();
-    orig_img_heirachy.clear();
-    orig_img_contours.clear();
     border_element_vec.clear();
     obj_vec.clear();
+    if(clean_prepared_data==true)
+    {
+        for(int a=0;a<image_map.size();a++)
+        {
+            for(int b=0;b<image_map.at(a).size();b++)
+            {
+                delete image_map[a][b];
+            }
+            image_map[a].clear();
+        }
+        prepared_data_obj.obj_vec_for_each_img.clear();
+    }
     image_map.clear();
+
 }
 
 void image_package_class::save_current_img_data()
@@ -1209,7 +1164,7 @@ void image_package_class::split_package_data(vector<image_package_class*> *ipc_v
     cout<<"\nspliting complete";
 }
 
-void image_package_class::combine_package_data(vector<image_package_class*> *ipc_vec)
+void image_package_class::combine_package_data(vector<image_package_class*> *ipc_vec)//this function is not used currently but will be used once the final result is arrived
 {
     //combination part
     for(int a=0;a<ipc_vec->size();a++)
@@ -1229,6 +1184,7 @@ void image_package_class::combine_package_data(vector<image_package_class*> *ipc
     //for testing
     for(int a=0;a<prepared_data_obj.obj_vec_for_each_img.size();a++)
     {   plot_obj_maps(&prepared_data_obj.obj_vec_for_each_img.at(a),&prepared_data_obj.image_map_vec.at(a),image_paths.at(a));}
+    clean_image_package_class_entierly(true);
     //int gh;cin>>gh;
 }
 
@@ -1255,6 +1211,31 @@ image_package_class::image_package_class(int id_,string label_,string dir_path_)
     }
     else
     {   cout<<"object locked";}
+}
+
+long double image_package_class::memory_stats()
+{
+    cout<<"\n\n\ntotal size of this image_package_class class in bytes= "<<sizeof(image_package_class);
+    int x=0;
+    if(image_map.size()>0)
+    {   x=image_map.at(0).size();cout<<"check!!!!!!!!!!";}
+    cout<<"\nsize of image_map obj="<<sizeof(image_map_element)*image_map.size()*x+sizeof(image_map);
+    int total=0;
+    for(int a=0;a<obj_vec.size();a++)
+    {   total+=obj_vec.at(a).size();}
+    cout<<"\nsize of obj_vec obj="<<sizeof(obj_vec);
+    cout<<"\nsize of border_element_vec obj="<<sizeof(border_element_vec);
+    cout<<"\nsize of prepared data struct="<<sizeof(prepared_data);
+    long int total_no_of_image_map_element=0;
+    for(int a=0;a<prepared_data_obj.image_map_vec.size();a++)//for each image
+    {
+        total_no_of_image_map_element+=(prepared_data_obj.image_map_vec.at(a).size()*prepared_data_obj.image_map_vec.at(a).at(0).size());
+    }
+    cout<<"\nt="<<total_no_of_image_map_element;
+    cout<<"\nsize of prepared_data_obj obj image_map_vec="<<sizeof(prepared_data)+total_no_of_image_map_element*sizeof(image_map_element*)+sizeof(image_map_element)*total_no_of_image_map_element;
+    cout<<"\nimage_map_element size="<<sizeof(image_map_element);
+    cout<<"\nimage_map_element* size="<<sizeof(image_map_element*);
+    //size of prepared_data_obj obj obj_vec_for_each_img
 }
 
 image_package_class::image_package_class()

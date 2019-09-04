@@ -36,7 +36,9 @@ void img_data_preparation_process_handler::slicing_process_handler()
     {   errors[a]=pthread_join(img_data_preparation_thread[a],NULL);}
     //data combining process
     ipc_vec.pop_back();
-    obj->combine_package_data(&ipc_vec);
+    //obj->combine_package_data(&ipc_vec);//this function is not used currently but will be used once the final result is arrived
+    for(int a=0;a<ipc_vec.size();a++)
+    {   delete ipc_vec[a];}
     ipc_vec.clear();
     cout<<"\nfinised a label....";
 }
@@ -56,7 +58,7 @@ void logic_core::fix_first_read_dir_name(string &str)
 
 bool logic_core::read_image_data()
 {
-    image_package_class *dataset_table_obj_address;
+    image_package_class *dataset_table_obj_address;//so old name still exist ha ha!!!
     ifstream stream1("image_data/dataset_table.csv",ios::in);
     string line;
     stream1>>line;
@@ -101,7 +103,6 @@ bool logic_core::read_image_data()
             ch[1]='\0';
             strcat(line_arr,ch);
         }
-        //cout<<"\ndir_vec="<<dir_path_temp.c_str()<<" name="<<label_temp.c_str()<<" line="<<line.c_str();
         dataset_table_obj_address=new image_package_class(id_temp,label_temp,dir_path_temp);
         image_package_vec.push_back(dataset_table_obj_address);  
     }
@@ -182,8 +183,16 @@ void logic_core::train_segment(vector<core_class> &core_vec)
     for(int a=0;a<img_data_preparation_process_handler_vec.size();a++)
     {
         img_data_preparation_process_handler_vec[a]->slicing_process_handler();
+        delete img_data_preparation_process_handler_vec[a];
     }
-    //img_data_preparation_process_handler_vec[0]->slicing_process_handler();   
+    for(int a=0;a<image_package_vec.size();a++)
+    {   delete image_package_vec[a];}
+    cout<<"\n\nfinished preparation....";
+    //image_package_vec[0]->memory_stats();
+    int gh; cin>>gh;
+    /*
+    under construction
+    */
 }
 
 void logic_core::set_logic_core_no(int no)
