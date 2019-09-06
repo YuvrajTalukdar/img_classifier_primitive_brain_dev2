@@ -91,10 +91,6 @@ class image_package_class
     vector<vector<image_map_element*>> image_map;//the main img map
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
     vector<vector<image_map_element*>> border_element_vec;//border elements of each obj without the buffer area
-
-        //output from the border differentiator
-    string imgpath;//for border plotter
-    //output from the prominient_border_finder
     
     struct prepared_data
     {
@@ -132,8 +128,16 @@ class image_package_class
 
     void border_info_extractor();
         //data preparation step 2
-   
-    void data_preparation_for_border_finder();//ok tested
+    struct pixel
+    {
+        int edge_id;
+        int value;
+        int x,y;
+        bool select_status=false;
+    };
+    void remove_non_free_elements_MODIFIED_SOBEL(vector<vector<pixel>> &sobel_binary_map,vector<vector<int>>* result);//ok tested
+    void search_for_neighbour_MODIFIED_SOBEL(pixel &current_pixel,vector<vector<pixel>> &sobel_binary_map,vector<vector<int>> &result);//ok tested
+    void modified_sobel();//ok tested
         //data preparation step 1 
     struct obj_info
     {   
@@ -173,7 +177,6 @@ class image_package_class
     static void onMouse(int evt,int x,int y,int flags,void* param);
     void second_stage_analyzer(Mat plot,int slice_size);
     void plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,vector<vector<image_map_element*>>* image_map1,string orig_img_path);//for testing create_color_maps() function
-    long double memory_stats();//gives the details of how much each variable is occupying memory.
 
     //data preparation process handler function
     void start_data_preparation_process();
