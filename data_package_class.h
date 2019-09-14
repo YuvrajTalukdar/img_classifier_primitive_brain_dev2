@@ -6,18 +6,19 @@ Data package class
 
 #include<vector>
 #include<iostream>
-//for memory checking functions
-#include <unistd.h>
-#include <ios>
-#include <fstream>
-#include <string>
-//for total amt of memory
-#include "sys/types.h"
-#include "sys/sysinfo.h"
-//for random generator
-#include <stdlib.h>     /* srand, rand */
-#include <time.h>       /* time */
-//for opencv
+#include<fstream>
+#include<string>
+//for memory checking functions---------------------
+//#include <unistd.h>
+//#include <ios>
+//for total amt of memory---------------------------
+//#include "sys/types.h"
+//#include "sys/sysinfo.h"
+//for random generator required for the plot_obj_maps function but looks like without these .h files the program is working.
+#include<stdlib.h>     /* srand, rand */
+#include<time.h>       /* time */
+#include<chrono>
+//for opencv----------------------------------------
 #include<opencv2/imgproc/imgproc.hpp>//for canny
 #include<opencv2/highgui/highgui.hpp>
 #include<opencv2/opencv.hpp>
@@ -25,6 +26,7 @@ Data package class
 
 using namespace cv;
 using namespace std;
+using namespace std::chrono;
 
 class data_package_class{  //raw input data used in the input_raw_to_prepared.cpp
     public:
@@ -156,12 +158,13 @@ class image_package_class
     int find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec);//ok tested
     bool check_if_element_is_border_element(image_map_element* element);//ok tested
     void find_obj_border_elements(vector<image_map_element*> *obj,vector<image_map_element*> *border_element_vec);//need testing
-    void find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results,vector<image_map_element*> *border_elements_vec);//ok tested
-    struct sortingclass1 
+    void find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results,vector<image_map_element*> *border_elements_vec,int neighbouring_obj_search_mode);//ok tested
+    /*struct sortingclass1 
     {
         bool operator() (vector<image_map_element*> vec1,vector<image_map_element*> vec2) 
         { return (vec1.size()<vec2.size());}
-    }sorting_helper1; 
+    }sorting_helper1;*/ 
+    int binary_search_for_strict(int start_index,int end_index,vector<vector<image_map_element*>>* obj_vec_temp,int search_id);
     void similar_obj_combination_process_strict();//ok testing
     //object mapping proceess functions
     int avg_color_in_slice(Mat* slice,char color);//color maper function//ok tested  
@@ -172,12 +175,15 @@ class image_package_class
     void remove_non_free_elements(vector<vector<int>>* result);//color maper function//ok tested
     void create_color_maps();//color maper function//ok tested
     
-    //testing functions
+    //testing functions and variables
     //static void onMouse(int evt,int x,int y,int flags,void* param,void* userdata);
     static void onMouse(int evt,int x,int y,int flags,void* param);
     void second_stage_analyzer(Mat plot,int slice_size);
     void plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,vector<vector<image_map_element*>>* image_map1,string orig_img_path);//for testing create_color_maps() function
-
+    bool perform_time_analysis=false;
+    int64_t find_neighbouring_objs_timer=0,find_neighbouring_obj_avg_color_of_closest_area_timer=0;
+    int64_t first=0,second=0,third=0;
+    
     //data preparation process handler function
     void start_data_preparation_process();
     void clean_up_prepared_data_obj();

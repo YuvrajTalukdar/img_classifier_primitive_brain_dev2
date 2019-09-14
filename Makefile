@@ -3,8 +3,8 @@ CC=g++
 OPENCVLIBS=`pkg-config --cflags --libs opencv`
 LIBS= -lpthread
 # use -Wall for displaying all warnings
-CXXFLAGS= -std=c++17 -march=native -mtune=native -O2
-CXXFLAGS2= -std=c++17 -march=native -mtune=native -O2 
+CXXFLAGS= -std=c++17 -march=native -mtune=native -O2 
+CXXFLAGS2= -std=c++17 -march=native -mtune=native -O2
 all: a.out
 
 a.out: main.o brain_starter.o brain_class.o segment_class.o \

@@ -529,8 +529,9 @@ void image_package_class::find_obj_border_elements(vector<image_map_element*> *o
     }
 }
 
-void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results,vector<image_map_element*> *border_element_vec)//ok tested
+void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_all_objs,vector<vector<image_map_element*>> *results,vector<image_map_element*> *border_element_vec,int neighbouring_obj_search_mode)//ok tested
 {
+    auto start1 = high_resolution_clock::now(); 
     int new_col_index,new_row_index;
     int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
     //find_obj_border_elements(obj,border_element_vec);
@@ -539,7 +540,6 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
       function is not working when called from here. */
     //detect the first bordel cell by brut force
      
-    //this below algorithm is the correct version of the further below algorithm but results of the one 
     image_map_element *border_element;
     int row_index_zero=obj->at(0)->row_index,column_index_zero=obj->at(0)->col_index,obj_id=obj->at(0)->obj_id;
     int current_row=row_index_zero,current_col=column_index_zero;
@@ -550,28 +550,12 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
         current_row--;
     }
     border_element_vec->push_back(border_element);
-    /*
-    image_map_element *border_element;
-    for(int a=0;a<obj->size();a++)
-    {
-        int col_index=obj->at(a)->col_index,row_index=obj->at(a)->row_index;
-        bool border_element_found=false;
-        for(int b=0;b<8;b++)
-        {
-            new_col_index=col_index+delta_co_ordinates[b][1];
-            new_row_index=row_index+delta_co_ordinates[b][0];
-            if(new_col_index>=0 && new_row_index>=0 && new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size())
-            {
-                if(image_map.at(new_row_index).at(new_col_index)->obj_id!=obj->at(a)->obj_id)
-                {   border_element_found=true;}
-            }
-        }
-        if(border_element_found==true)
-        {   border_element=obj->at(a);break;}
-    }
-    border_element_vec->push_back(border_element);
-    */
+    auto stop1 = high_resolution_clock::now(); 
+    auto duration1 = duration_cast<microseconds>(stop1 - start1); 
+    first+=duration1.count();
+
     //detect the  rest of the border elements
+    auto start2 = high_resolution_clock::now(); 
     int a=0;
     point1:
     int index_of_first_element_added=-1;
@@ -580,17 +564,8 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
     {
         for(int b=0;b<8;b++)
         {
-            //cout<<"\na="<<a;
-            //cout<<" size="<<border_element_vec->size();
-            //int vb1=border_element_vec->at(a)->col_index;
-            //int vb2=delta_co_ordinates[b][1];//border_element->
-            //cout<<"\nvc3="<<vb1<<" vb2="<<vb2;
-            //int vb3=vb1+vb2;
             new_col_index=border_element_vec->at(a)->col_index+delta_co_ordinates[b][1];
-            //int vc1=border_element_vec->at(a)->row_index;
-            //int vc2=delta_co_ordinates[b][0];
-            //cout<<"\nvc2="<<vc2<<" vc1="<<vc1;
-            //int vc3=vc1+vc2;
+            
             new_row_index=border_element_vec->at(a)->row_index+delta_co_ordinates[b][0];
             if(new_col_index>=0 && new_row_index>=0 && 
                new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() && 
@@ -618,36 +593,64 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
         a=index_of_first_element_added;
         goto point1;
     }
-    
+    auto stop2 = high_resolution_clock::now(); 
+    auto duration2 = duration_cast<microseconds>(stop2 - start2); 
+    second+=duration2.count();
     //detection of the neighbouring objects
+    auto start3 = high_resolution_clock::now(); 
     for(int a=0;a<border_element_vec->size();a++)
     {
         for(int b=0;b<8;b++)
-        {
+        {   
             new_col_index=border_element_vec->at(a)->col_index+delta_co_ordinates[b][1];
             new_row_index=border_element_vec->at(a)->row_index+delta_co_ordinates[b][0];
             if(new_col_index>=0 && new_row_index>=0 &&
                new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size() &&
                border_element_vec->at(a)->obj_id!=image_map.at(new_row_index).at(new_col_index)->obj_id
                )
-            {
+            {   
                 bool found=false;
                 for(int c=0;c<results->size();c++)
-                {
+                {   
                     if(image_map.at(new_row_index).at(new_col_index)->obj_id==results->at(c).at(0)->obj_id)
                     {   found=true;break;}
                 }
                 if(found==false)
                 {
-                    for(int c=0;c<list_of_all_objs->size();c++)
+                    //linear searcher
+                    if(neighbouring_obj_search_mode==2)
                     {
-                        if(list_of_all_objs->at(c).at(0)->obj_id==image_map.at(new_row_index).at(new_col_index)->obj_id)
-                        {   results->push_back(list_of_all_objs->at(c));break;}
+                        for(int c=0;c<list_of_all_objs->size();c++)
+                        {
+                            if(list_of_all_objs->at(c).at(0)->obj_id==image_map.at(new_row_index).at(new_col_index)->obj_id)
+                            {   results->push_back(list_of_all_objs->at(c));break;}
+                        }
+                    } 
+                    //binary_searcher
+                    else if(neighbouring_obj_search_mode==1)
+                    {
+                        int required_index=binary_search_for_strict(0,list_of_all_objs->size()-1,list_of_all_objs,image_map.at(new_row_index).at(new_col_index)->obj_id);
+                        if(required_index!=-1)
+                        results->push_back(list_of_all_objs->at(required_index));
                     }
                 }
             }
         }
     }
+    auto stop3 = high_resolution_clock::now();
+    auto duration3 = duration_cast<microseconds>(stop3 - start3); 
+    third+=duration3.count();
+}
+
+int image_package_class::binary_search_for_strict(int start_index,int end_index,vector<vector<image_map_element*>>* obj_vec_temp,int search_id)
+{
+    int current_index=(end_index-start_index)/2+start_index;
+    if(obj_vec_temp->at(current_index).at(0)->obj_id==search_id)
+    {   return current_index;}
+    else if(obj_vec_temp->at(current_index).at(0)->obj_id>search_id)
+    {   binary_search_for_strict(start_index,current_index,obj_vec_temp,search_id);}
+    else if(obj_vec_temp->at(current_index).at(0)->obj_id<search_id)
+    {   binary_search_for_strict(current_index,end_index,obj_vec_temp,search_id);}
 }
 
 int image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec)//ok tested
@@ -662,13 +665,12 @@ int image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<
     };
     vector<vector<float>> id_and_closeness_vec;
     vector<data_structure> data_structure_vec;
-    vector<image_map_element*> neighbour_obj_elements;//for temporary storage 
-    vector<image_map_element*> border_elements;//for temporary storage
+    vector<image_map_element*> neighbour_obj_elements;//for temporary storage. Its for the neighbouring obj border elements sharing the border with current obj.
+    vector<image_map_element*> border_elements;//for temporary storage. Its for storing the current obj border elements sharing border with the neighbouring obj.
     for(int a=0;a<list_of_neighbouring_objs->size();a++)
     {  
         border_elements.clear();
         neighbour_obj_elements.clear();
-        border_elements.clear();
         data_structure_vec.clear();
         //collect all the possible data
         for(int b=0;b<border_element_vec->size();b++)
@@ -747,7 +749,7 @@ void image_package_class::similar_obj_combination_process_strict()//ok tested
 {
     vector<vector<image_map_element*>> obj_vec_temp;
     obj_vec_temp=obj_vec;
-    sort(obj_vec_temp.begin(),obj_vec_temp.end(),sorting_helper1);
+    //sort(obj_vec_temp.begin(),obj_vec_temp.end(),sorting_helper1);
     vector<vector<image_map_element*>> neighbours_found;
     vector<image_map_element*> border_element_vec;
     for(int a=0;a<obj_vec_temp.size();a++)
@@ -757,9 +759,17 @@ void image_package_class::similar_obj_combination_process_strict()//ok tested
             neighbours_found.clear();
             border_element_vec.clear();
             //find the neighbouring obj and the border elements of te current obj
-            find_neighbouring_objs(&obj_vec_temp.at(a),&obj_vec_temp,&neighbours_found,&border_element_vec);
+            auto start1 = high_resolution_clock::now(); 
+            find_neighbouring_objs(&obj_vec_temp.at(a),&obj_vec_temp,&neighbours_found,&border_element_vec,1);
+            auto stop1= high_resolution_clock::now(); 
+            auto duration1 = duration_cast<microseconds>(stop1 - start1); 
+            find_neighbouring_objs_timer+=duration1.count();
             //find the id og the obj which is the cloesest in terms of color to the current obj
+            auto start2 = high_resolution_clock::now(); 
             int id_for_obj_to_combine_with=find_neighbouring_obj_avg_color_of_closest_area(&obj_vec_temp.at(a),&neighbours_found,&border_element_vec);
+            auto stop2 = high_resolution_clock::now();
+            auto duration2 = duration_cast<microseconds>(stop2 - start2); 
+            find_neighbouring_obj_avg_color_of_closest_area_timer+=duration2.count();
             //add the obj to its required neighbour
             int index_of_the_obj_to_combine_with;
             for(int b=0;b<obj_vec_temp.size();b++)
@@ -787,7 +797,7 @@ void image_package_class::obj_info_gatherer(int a,vector<obj_info> *obj_info_vec
     list_of_neighbouring_objs->clear();
     vector<image_map_element*> border_element_vec;
     border_element_vec.clear();
-    find_neighbouring_objs(&obj_vec.at(a),&obj_vec,list_of_neighbouring_objs,&border_element_vec);
+    find_neighbouring_objs(&obj_vec.at(a),&obj_vec,list_of_neighbouring_objs,&border_element_vec,2);// 2 is neighbouring_obj_search_mode in linear mode
     //calc the color distance
     
     int no_of_objs_to_be_checked=10;//new patch //10
@@ -889,7 +899,6 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
             float hue_c=(int)hsv.at<Vec3b>(0,0)[0];
             hue_c=(hue_c/180.0)*255.0;
             conversion_mat.release();
-            //cout<<"\nhue_c="<<hue_c<<" r="<<obj_vec.at(a).at(b)->avg_red<<" g="<<obj_vec.at(a).at(b)->avg_green<<" b="<<obj_vec.at(a).at(b)->avg_blue;
             hue+=hue_c;
         }
         obj1.avg_green=green/b;
@@ -897,7 +906,6 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
         obj1.avg_blue=blue/b;
         
         obj1.avg_hue=hue/b;
-        //cout<<"\nhue="<<obj1.avg_hue;
         obj_info_vec.push_back(obj1);
     }
    
@@ -1194,7 +1202,7 @@ void image_package_class::modified_sobel()//ok tested
     {
         if(edge_vec.at(a).size()<10)
         {
-            edge_vec.erase(edge_vec.begin()+a);
+            edge_vec.erase(edge_vec.begin()+a); 
         }
     }
     //testing the plotter algorithm
@@ -1208,7 +1216,7 @@ void image_package_class::modified_sobel()//ok tested
     }
     //imshow("new_plot",new_plot);
     sobel_binary_map.clear();
-    waitKey(0);
+    //waitKey(0);
     sobel.release();
     plot.release();
     new_plot.release();
@@ -1220,7 +1228,8 @@ void image_package_class::start_data_preparation_process()
     for(unsigned int a=0;a<image_paths.size();a++)
     {
         cout<<"\npath="<<image_paths[a];
-        //cout<<"\npreprocessing going on...";
+        auto start = high_resolution_clock::now(); 
+        cout<<"\npreprocessing going on...";
         //int gh;cin>>gh;
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
@@ -1244,32 +1253,78 @@ void image_package_class::start_data_preparation_process()
         channels.clear();
         
         //data preparation step 1
-        //cout<<"\ncolor mapping...";
-        //cin>>gh;
+        auto stop = high_resolution_clock::now(); 
+        if(perform_time_analysis==true)
+        { 
+            auto duration1 = duration_cast<microseconds>(stop - start); 
+            cout<<"\nduration= "<<duration1.count()<<" microseconds";
+        }
+        
+        auto start2 = high_resolution_clock::now(); 
+        cout<<"\ncolor mapping...";
         create_color_maps();
-        //cout<<"\n\norig="<<orig_image_temp->rows<<" * "<<orig_image_temp->cols;
-        //cout<<"\nnew="<<image_map.size()<<" * "<<image_map.at(0).size();
-        //int gh;cin>>gh;
-        //cout<<"\nstrict process...";
-        //cin>>gh;
+        auto stop2 = high_resolution_clock::now(); 
+        if(perform_time_analysis==true)
+        {  
+            auto duration2 = duration_cast<microseconds>(stop2 - start2); 
+            cout<<"\nduration= "<<duration2.count()<<" microseconds";
+        }
+        auto start3 = high_resolution_clock::now(); 
+        cout<<"\nstrict process...";
         similar_obj_combination_process_strict();//no data leakage till here
+        auto stop3 = high_resolution_clock::now(); 
+        if(perform_time_analysis==true)
+        {
+            auto duration3 = duration_cast<microseconds>(stop3 - start3); 
+            cout<<"\nduration= "<<duration3.count()<<" microseconds";
+            cout<<"\nfind_neighbouring_objs_timer= "<<find_neighbouring_objs_timer;
+            cout<<"\nfind_neighbouring_obj_avg_color_of_closest_area_timer= "<<find_neighbouring_obj_avg_color_of_closest_area_timer;
+            cout<<"\nfirst= "<<first;
+            cout<<"\nsecond= "<<second;
+            cout<<"\nthird= "<<third;
+        }
         
         //cout<<"\ntesting...........";
         //plot_obj_maps(&obj_vec,&image_map,image_paths[a]);
 
-        //cout<<"\nunstrict process...";
-        //cin>>gh;
+        auto start4 = high_resolution_clock::now(); 
+        cout<<"\nunstrict process...";
         similar_obj_combinarion_process_un_strict();//leakage fixed
+        auto stop4 = high_resolution_clock::now();
+        if(perform_time_analysis==true) 
+        {
+            auto duration4 = duration_cast<microseconds>(stop4 - start4); 
+            cout<<"\nduration= "<<duration4.count()<<" microseconds";
+        }
         //data preparation step 2
+        
+        auto start5 = high_resolution_clock::now(); 
+        cout<<"\nmodified_sobel...";
         modified_sobel();
+        auto stop5 = high_resolution_clock::now();
+        if(perform_time_analysis==true)
+        {
+            auto duration5 = duration_cast<microseconds>(stop5 - start5);  
+            cout<<"\nduration= "<<duration5.count()<<" microseconds";
+        }
+        
         //data preparation step 3
-        border_info_extractor();
+        //border_info_extractor();
         //data preparation step 4
-        data_arranger();
+        //data_arranger();
         orig_image_temp->release();
         delete orig_image_temp;
         //save_current_img_data();//this function is not used currently but will be used once the final result is arrived
+        auto start6 = high_resolution_clock::now(); 
+        cout<<"\nplotting the img_map...";
         plot_obj_maps(&obj_vec,&image_map,image_paths.at(a));
+        auto stop6 = high_resolution_clock::now();
+        if(perform_time_analysis==true)
+        {
+            auto duration6 = duration_cast<microseconds>(stop6 - start6);  
+            cout<<"\nduration= "<<duration6.count()<<" microseconds";
+        }
+        //int gh;cin>>gh;
         clean_image_package_class_entierly(true);
         //int gh;cin>>gh;
     }
