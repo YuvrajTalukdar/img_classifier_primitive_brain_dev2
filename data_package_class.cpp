@@ -648,9 +648,9 @@ int image_package_class::binary_search_for_strict(int start_index,int end_index,
     if(obj_vec_temp->at(current_index).at(0)->obj_id==search_id)
     {   return current_index;}
     else if(obj_vec_temp->at(current_index).at(0)->obj_id>search_id)
-    {   binary_search_for_strict(start_index,current_index,obj_vec_temp,search_id);}
+    {   binary_search_for_strict(start_index,current_index-1,obj_vec_temp,search_id);}
     else if(obj_vec_temp->at(current_index).at(0)->obj_id<search_id)
-    {   binary_search_for_strict(current_index,end_index,obj_vec_temp,search_id);}
+    {   binary_search_for_strict(current_index+1,end_index,obj_vec_temp,search_id);}
 }
 
 int image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec)//ok tested
@@ -1324,9 +1324,7 @@ void image_package_class::start_data_preparation_process()
             auto duration6 = duration_cast<microseconds>(stop6 - start6);  
             cout<<"\nduration= "<<duration6.count()<<" microseconds";
         }
-        //int gh;cin>>gh;
         clean_image_package_class_entierly(true);
-        //int gh;cin>>gh;
     }
 }
 

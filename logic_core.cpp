@@ -25,6 +25,8 @@ void img_data_preparation_process_handler::slicing_process_handler()
     vector<pthread_t> img_data_preparation_thread(ipc_vec.size());
     vector<int> errors(ipc_vec.size());
         //running the threads
+    cout<<"\nstart!!";
+    int gh;cin>>gh;
     for(int a=0;a<img_data_preparation_thread.size();a++)
     {   errors[a]=pthread_create(&img_data_preparation_thread[a],NULL,(THREADFUNCPTR)&image_package_class::start_data_preparation_process,ipc_vec.at(a));}
     for(int a=0;a<img_data_preparation_thread.size();a++)
