@@ -71,7 +71,6 @@ bool image_package_class::color_distance(image_map_element* origin_element,image
     {   no_of_cells_to_check=5;}//5
     else
     {   no_of_cells_to_check=obj_elements_vec_ptr->size();}
-    bool all_is_well=true;
     int count1=0;
     for(int a=obj_elements_vec_ptr->size()-1;a>=obj_elements_vec_ptr->size()-no_of_cells_to_check;--a)
     {
@@ -130,14 +129,31 @@ bool image_package_class::color_distance(image_map_element* origin_element,image
         //distance+=obj_elements_vec_ptr->at(a)->avg_hue-new_element->avg_hue;
     }
     //float distance=sqrt((origin_element->avg_red-new_element->avg_red)*(origin_element->avg_red-new_element->avg_red)+(origin_element->avg_green-new_element->avg_green)*(origin_element->avg_green-new_element->avg_green)+(origin_element->avg_blue-new_element->avg_blue)*(origin_element->avg_blue-new_element->avg_blue));
-    if(distance/no_of_cells_to_check>color_sensitiviy /*|| count1>no_of_cells_to_check/2*/)
-    {   all_is_well=false;}
-    else
-    {   all_is_well=true;}
+    
+    //get_color_sensitivity(origin_element,new_element);
 
-    return all_is_well;
+    if(distance/no_of_cells_to_check>get_color_sensitivity(origin_element,new_element) /*|| count1>no_of_cells_to_check/2*/)
+    //if(distance/no_of_cells_to_check>color_sensitiviy) 
+    {   return false;}
+    else
+    {   return true;}
 }
 
+double image_package_class::get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element)
+{
+    double orig=(int)sobel.at<uchar>(origin_element->row_index,origin_element->col_index);
+    double new_ele=(int)sobel.at<uchar>(new_element->row_index,new_element->col_index);
+    double x=abs(orig-new_ele);
+    //double y=-0.04081632653*x+10.40816327;
+    //double y=-0.0408*x+10.408;
+    //double y=-0.22*x+10;
+    double y=-0.18*x+8;
+    //cout<<"\n\nx="<<x<<" y="<<y;
+    if(y>0)
+    {   return y;}
+    else if(y<=0)
+    {   return 0;}
+}
 void image_package_class::search_for_neighbour(image_map_element* element,vector<vector<int>>* result)//color maper function//ok tested
 {
     int col_index=element->col_index,row_index=element->row_index;
@@ -180,24 +196,6 @@ void image_package_class::remove_non_free_elements(vector<vector<int>>* result)/
 
 void image_package_class::create_color_maps()//color maper function//ok tested
 {
-    float upper_limit=938400,lower_limit=100000;//100000
-    if(orig_image_temp->rows*orig_image_temp->cols>=upper_limit)
-    {
-        slice_row_size=5;//5
-        slice_col_size=5;//5
-    }
-    else if(orig_image_temp->rows*orig_image_temp->cols<=lower_limit)
-    {
-        slice_row_size=1;
-        slice_col_size=1;
-    }
-    else
-    {
-        float difference=upper_limit-lower_limit;
-        float percentage=((orig_image_temp->rows*orig_image_temp->cols)/(difference))*2.9;
-        slice_col_size=percentage+2;
-        slice_row_size=percentage+2;
-    }
     //cout<<"\nrow="<<slice_row_size<<" col="<<slice_col_size;
     no_of_slices_row_wise=(orig_image_temp->rows)/slice_row_size;
     no_of_slices_col_wise=(orig_image_temp->cols)/slice_col_size;
@@ -1053,7 +1051,7 @@ void image_package_class::modified_sobel()//ok tested
     int scale = 1;
     int delta = 0;
     int ddepth = CV_16S;
-    Mat src_gray,sobel;
+    Mat src_gray;
     Mat dst;
     float row=1.0/((float)slice_row_size),col=1.0/((float)slice_col_size);
     resize(*orig_image_temp, dst, dst.size(),row,col);//cols,rows or x,y
@@ -1062,9 +1060,9 @@ void image_package_class::modified_sobel()//ok tested
     Mat grad_x, grad_y;
     Mat abs_grad_x, abs_grad_y;
     Scharr( src_gray, grad_x, ddepth, 1, 0, scale, delta, BORDER_DEFAULT );
-    Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
+    //Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT );
     Scharr( src_gray, grad_y, ddepth, 0, 1, scale, delta, BORDER_DEFAULT );
-    Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
+    //Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT );
     convertScaleAbs( grad_x, abs_grad_x );
     convertScaleAbs( grad_y, abs_grad_y );
     addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0,sobel);
@@ -1082,9 +1080,9 @@ void image_package_class::modified_sobel()//ok tested
         { return obj1.value>obj2.value;}
     }sorting_helper;
     vector<pixel> pixels;
-    float picking_percent=5;//25
+    //float picking_percent=5;//25
     int slice_row_size=40,slice_col_size=40;
-    int no_of_pixels_to_pick=(picking_percent/100.0)*slice_col_size*slice_row_size;
+    //int no_of_pixels_to_pick=(picking_percent/100.0)*slice_col_size*slice_row_size;
     Mat plot(sobel.size(), CV_8U,Scalar(0));
     for(int a=0;a<sobel.rows;a+=slice_row_size)
     {
@@ -1206,20 +1204,21 @@ void image_package_class::modified_sobel()//ok tested
         }
     }
     //testing the plotter algorithm
-    Mat new_plot(sobel.size(),CV_8U,Scalar(0));
+    //Mat new_plot(sobel.size(),CV_8U,Scalar(0));
     for(int a=0;a<edge_vec.size();a++)
     {
         for(int b=0;b<edge_vec.at(a).size();b++)
         {
-            new_plot.at<uchar>(edge_vec.at(a).at(b)->y,edge_vec.at(a).at(b)->x)=255;
+            sobel.at<uchar>(edge_vec.at(a).at(b)->y,edge_vec.at(a).at(b)->x)=255;
         }
     }
     //imshow("new_plot",new_plot);
+    //sobel=new_plot;
     sobel_binary_map.clear();
     //waitKey(0);
-    sobel.release();
+    //sobel.release();
     plot.release();
-    new_plot.release();
+    //new_plot.release();
 }
 
 void image_package_class::start_data_preparation_process()
@@ -1236,6 +1235,7 @@ void image_package_class::start_data_preparation_process()
         vector<Mat> channels;
         cvtColor(*orig_image_temp,*orig_image_temp,CV_BGR2HSV);
         split(*orig_image_temp,channels);
+        /*
         GaussianBlur(channels[1], channels[1], Size(45,45), 0);
         GaussianBlur(channels[1], channels[1], Size(45,45), 0);
         GaussianBlur(channels[1], channels[1], Size(45,45), 0);
@@ -1244,7 +1244,7 @@ void image_package_class::start_data_preparation_process()
         GaussianBlur(channels[1], channels[1], Size(45,45), 0);
         GaussianBlur(channels[1], channels[1], Size(45,45), 0);
         GaussianBlur(channels[1], channels[1], Size(45,45), 0);
-
+        */
         merge(channels,*orig_image_temp);
         cvtColor(*orig_image_temp,*orig_image_temp,COLOR_HSV2BGR);
         channels[0].release();
@@ -1262,7 +1262,29 @@ void image_package_class::start_data_preparation_process()
         
         auto start2 = high_resolution_clock::now(); 
         cout<<"\ncolor mapping...";
+        float upper_limit=938400,lower_limit=100000;//100000
+        if(orig_image_temp->rows*orig_image_temp->cols>=upper_limit)
+        {
+            slice_row_size=5;//5
+            slice_col_size=5;//5
+        }
+        else if(orig_image_temp->rows*orig_image_temp->cols<=lower_limit)
+        {
+            slice_row_size=1;
+            slice_col_size=1;
+        }
+        else
+        {
+            float difference=upper_limit-lower_limit;
+            float percentage=((orig_image_temp->rows*orig_image_temp->cols)/(difference))*2.9;
+            slice_col_size=percentage+2;
+            slice_row_size=percentage+2;
+        }
+        modified_sobel();
+        //cout<<"\n\nx="<<sobel.cols<<" y="<<sobel.rows;
         create_color_maps();
+        sobel.release();
+        //cout<<"\nx2="<<image_map[0].size()<<" y2="<<image_map.size();
         auto stop2 = high_resolution_clock::now(); 
         if(perform_time_analysis==true)
         {  
@@ -1289,7 +1311,7 @@ void image_package_class::start_data_preparation_process()
 
         auto start4 = high_resolution_clock::now(); 
         cout<<"\nunstrict process...";
-        similar_obj_combinarion_process_un_strict();//leakage fixed
+        //similar_obj_combinarion_process_un_strict();//leakage fixed
         auto stop4 = high_resolution_clock::now();
         if(perform_time_analysis==true) 
         {
@@ -1300,7 +1322,7 @@ void image_package_class::start_data_preparation_process()
         
         auto start5 = high_resolution_clock::now(); 
         cout<<"\nmodified_sobel...";
-        modified_sobel();
+        //modified_sobel();
         auto stop5 = high_resolution_clock::now();
         if(perform_time_analysis==true)
         {

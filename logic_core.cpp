@@ -163,7 +163,7 @@ void logic_core::train_segment(vector<core_class> &core_vec)
     for(int a=0;a<image_package_vec.size();a++)
     {
         img_data_preparation_process_handler* obj1=new img_data_preparation_process_handler();
-        obj1->color_sensitivity=8;//12,8,10 for the color mapper
+        obj1->color_sensitivity=5;//8,5 for the color mapper
         obj1->color_sensitivity2=40;//40,25,10//for un strict combination
         obj1->no_of_sq_areas_need_to_be_checked_for_avg_color=5;//value for testing
         obj1->min_size_of_obj=40;//40

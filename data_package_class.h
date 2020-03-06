@@ -101,10 +101,7 @@ class image_package_class
     }prepared_data_obj;
     //temporary variables
     Mat* orig_image_temp;
-       //for canny edge detector
-        int lowThreshold=50;//50
-        int ratio=3,kernel_size=3;
-        int no_of_slices_row_wise,no_of_slices_col_wise;
+    int no_of_slices_row_wise,no_of_slices_col_wise;//required by plot_obj_maps and create_color_maps
     //meta data
     int label_id;
     //int slice_rows=2,slice_cols=2;
@@ -174,7 +171,8 @@ class image_package_class
     void search_for_neighbour(image_map_element* element,vector<vector<int>>* result);//color maper function//ok tested
     void remove_non_free_elements(vector<vector<int>>* result);//color maper function//ok tested
     void create_color_maps();//color maper function//ok tested
-    
+    double get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element);
+    Mat sobel;//required by modified_sobel get_color_sensitivity functions
     //testing functions and variables
     //static void onMouse(int evt,int x,int y,int flags,void* param,void* userdata);
     static void onMouse(int evt,int x,int y,int flags,void* param);
