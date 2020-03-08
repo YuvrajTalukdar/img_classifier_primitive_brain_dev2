@@ -136,7 +136,10 @@ class image_package_class
     };
     void remove_non_free_elements_MODIFIED_SOBEL(vector<vector<pixel>> &sobel_binary_map,vector<vector<int>>* result);//ok tested
     void search_for_neighbour_MODIFIED_SOBEL(pixel &current_pixel,vector<vector<pixel>> &sobel_binary_map,vector<vector<int>> &result);//ok tested
-    void modified_sobel();//ok tested
+    void bin_color_mapper(Mat* plot,int min_size_of_edge,vector<vector<pixel>> &sobel_binary_map,vector<vector<pixel*>> &edge_vec);
+    void plot_combiner(vector<Mat*>& input_plot_vec,Mat* new_plot);
+    void variable_thershold_sobel(Mat &img1,Mat &sobel_result,vector<vector<pixel>> &sobel_binary_map,vector<vector<pixel*>> &edge_vec,int min_edge_size);
+    void modified_sobel_process_handler();
         //data preparation step 1 
     struct obj_info
     {   
@@ -171,8 +174,8 @@ class image_package_class
     void search_for_neighbour(image_map_element* element,vector<vector<int>>* result);//color maper function//ok tested
     void remove_non_free_elements(vector<vector<int>>* result);//color maper function//ok tested
     void create_color_maps();//color maper function//ok tested
-    double get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element);
-    Mat sobel;//required by modified_sobel get_color_sensitivity functions
+    float get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element);
+    Mat sobel_plus_edge;//required by modified_sobel get_color_sensitivity functions
     //testing functions and variables
     //static void onMouse(int evt,int x,int y,int flags,void* param,void* userdata);
     static void onMouse(int evt,int x,int y,int flags,void* param);
