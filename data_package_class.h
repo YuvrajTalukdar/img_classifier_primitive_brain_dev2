@@ -85,11 +85,11 @@ class image_package_class
         int obj_id=-1;
         bool select_status=false;
         bool non_conflict_border_element=false;
-        int avg_red,avg_green,avg_blue;
-
-        //int avg_hue;
+        uchar avg_red,avg_green,avg_blue;
+        uchar avg_border_all;
     };
     //these are data vector for ONLY one image.
+    Mat sobel_plus_edge;//required by modified_sobel get_color_sensitivity functionsMat sobel_plus_edge;//required by modified_sobel get_color_sensitivity functions
     vector<vector<image_map_element*>> image_map;//the main img map
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
     vector<vector<image_map_element*>> border_element_vec;//border elements of each obj without the buffer area
@@ -175,7 +175,6 @@ class image_package_class
     void remove_non_free_elements(vector<vector<int>>* result);//color maper function//ok tested
     void create_color_maps();//color maper function//ok tested
     float get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element);
-    Mat sobel_plus_edge;//required by modified_sobel get_color_sensitivity functions
     //testing functions and variables
     //static void onMouse(int evt,int x,int y,int flags,void* param,void* userdata);
     static void onMouse(int evt,int x,int y,int flags,void* param);

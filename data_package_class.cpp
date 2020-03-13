@@ -26,6 +26,8 @@ int image_package_class::avg_color_in_slice(Mat* slice,char color)//color maper 
             {   avg+=(int)slice->at<Vec3b>(a,b)[1];}
             else if(color=='b'||color=='B')
             {   avg+=(int)slice->at<Vec3b>(a,b)[0];}
+            else if(color=='e'||color=='E')
+            {   avg+=(int)slice->at<uchar>(a,b);}
 
             //else if(color=='h'||color=='H')
             //{   avg+=(int)hsv.at<Vec3b>(a,b)[0];}
@@ -133,8 +135,8 @@ bool image_package_class::color_distance(image_map_element* origin_element,image
     
     //get_color_sensitivity(origin_element,new_element);
     //if((distance/no_of_cells_to_check)>(variable_color_sensitiviy_sum/no_of_cells_to_check))
-    //if(distance/no_of_cells_to_check>get_color_sensitivity(origin_element,new_element) /*|| count1>no_of_cells_to_check/2*/)
-    if(distance/no_of_cells_to_check>color_sensitiviy) 
+    if(distance/no_of_cells_to_check>get_color_sensitivity(origin_element,new_element) /*|| count1>no_of_cells_to_check/2*/)
+    //if(distance/no_of_cells_to_check>color_sensitiviy) 
     {   return false;}
     else
     {   return true;}
@@ -142,9 +144,10 @@ bool image_package_class::color_distance(image_map_element* origin_element,image
 
 float image_package_class::get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element)
 {
-    double orig=(int)sobel_plus_edge.at<uchar>(origin_element->row_index,origin_element->col_index);
-    double new_ele=(int)sobel_plus_edge.at<uchar>(new_element->row_index,new_element->col_index);
-    double x=abs(orig-new_ele);
+    //double orig=(int)sobel_plus_edge.at<uchar>(origin_element->row_index,origin_element->col_index);
+    //double new_ele=(int)sobel_plus_edge.at<uchar>(new_element->row_index,new_element->col_index);
+    //double x=abs(orig-new_ele);
+    double x=abs(origin_element->avg_border_all-new_element->avg_border_all);
     //double y=-0.04081632653*x+10.40816327;
     //double y=-0.0408*x+10.408;
     //double y=-0.22*x+10;
@@ -199,8 +202,7 @@ void image_package_class::remove_non_free_elements(vector<vector<int>>* result)/
 
 void image_package_class::create_color_maps()//color maper function//ok tested
 {
-    //cout<<"\nrow="<<slice_row_size<<" col="<<slice_col_size;
-    no_of_slices_row_wise=(orig_image_temp->rows)/slice_row_size;
+    no_of_slices_row_wise=(orig_image_temp->rows)/slice_row_size;//loss of pixel in the end position, happens here.
     no_of_slices_col_wise=(orig_image_temp->cols)/slice_col_size;
     //initializing the image map
     image_map.clear();
@@ -219,7 +221,8 @@ void image_package_class::create_color_maps()//color maper function//ok tested
             element->avg_blue=avg_color_in_slice(slice,'b');
             element->avg_green=avg_color_in_slice(slice,'g');
             element->avg_red=avg_color_in_slice(slice,'r');
-            
+            Mat ROI2(sobel_plus_edge,Rect(startx,starty,slice_row_size,slice_col_size));
+            element->avg_border_all=avg_color_in_slice(&ROI2,'e');
             //element->avg_hue=avg_color_in_slice(slice,'h');
 
             slice->release();
@@ -1284,7 +1287,7 @@ void image_package_class::variable_thershold_sobel(Mat &img1,Mat &sobel_result,v
 
 void image_package_class::modified_sobel_process_handler()
 {
-    int decrease_time=6;//6
+    short int decrease_time=slice_row_size;//6
     Mat small_src;
     resize(*orig_image_temp,small_src,Size(orig_image_temp->cols/decrease_time,orig_image_temp->rows/decrease_time));
     vector<vector<pixel>> sobel_binary_map;
@@ -1292,7 +1295,7 @@ void image_package_class::modified_sobel_process_handler()
     //Mat small_out(small_src.size(),CV_8U,Scalar(0));//only for testing pusposes
     Mat sobel_result;
     variable_thershold_sobel(small_src,sobel_result,sobel_binary_map,edge_vec,30);//small_src will automatically get released in this function.
-    sobel_result.release();//sobel result not required for the small_src.
+    //sobel_result.release();//sobel result not required for the small_src.
     //small src edge plotting process
     Mat small_src_edge_plot(orig_image_temp->size(),CV_8U,Scalar(0));
     for(int a=0;a<edge_vec.size();a++)
@@ -1307,7 +1310,7 @@ void image_package_class::modified_sobel_process_handler()
             }
         }
     }
-    sobel_binary_map.clear();
+    sobel_binary_map.clear();//this is for the unpurified bin map
     edge_vec.clear();
     Mat src_img=orig_image_temp->clone();
     variable_thershold_sobel(src_img,sobel_result,sobel_binary_map,edge_vec,30);
@@ -1322,25 +1325,32 @@ void image_package_class::modified_sobel_process_handler()
     }
     sobel_binary_map.clear();
     edge_vec.clear();
+    
     //imshow("small",src_edge_plot);
     //waitKey(0);
     //int gh;cin>>gh;
+    Mat temp(sobel_result.size(),CV_8U,Scalar(0));
     for(int a=0;a<small_src_edge_plot.rows;a++)
     {
         for(int b=0;b<small_src_edge_plot.cols;b++)
         {
             if(small_src_edge_plot.at<uchar>(a,b)==255)
-            {   sobel_result.at<uchar>(a,b)=255;}
+            {   
+                //temp.at<uchar>(a,b)=255;
+                sobel_result.at<uchar>(a,b)=255;
+            }
         }
     }
     //sobel_plus_edge=small_src_edge_plot.clone();
     //sobel_plus_edge=src_edge_plot.clone();
     sobel_plus_edge=sobel_result.clone();
+    //sobel_plus_edge=temp.clone();
+    //temp.release();
     small_src_edge_plot.release();
     //not used currently under construction
     src_edge_plot.release();
     sobel_result.release();
-    //imwrite("small_out_plot.jpg",sobel_plus_edge);
+    //imwrite("sobel_plus_edge.jpg",sobel_plus_edge);
 }
 
 void image_package_class::start_data_preparation_process()
