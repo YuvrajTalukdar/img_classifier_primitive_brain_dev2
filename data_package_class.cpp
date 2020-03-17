@@ -10,24 +10,24 @@ void image_package_class::border_info_extractor()
 
 }
 
-int image_package_class::avg_color_in_slice(Mat* slice,char color)//color maper function//ok tested
+int image_package_class::avg_color_in_slice(Mat &slice,char color)//color maper function//ok tested
 {
     //Mat hsv;
     //cvtColor(*slice,hsv,COLOR_BGR2HSV);
 
     int avg=0;
-    for(int a=0;a<slice->rows;a++)
+    for(int a=0;a<slice.rows;a++)
     {
-        for(int b=0;b<slice->cols;b++)
+        for(int b=0;b<slice.cols;b++)
         {
             if(color=='r'||color=='R')
-            {   avg+=(int)slice->at<Vec3b>(a,b)[2];}
+            {   avg+=(int)slice.at<Vec3b>(a,b)[2];}
             else if(color=='g'||color=='G')
-            {   avg+=(int)slice->at<Vec3b>(a,b)[1];}
+            {   avg+=(int)slice.at<Vec3b>(a,b)[1];}
             else if(color=='b'||color=='B')
-            {   avg+=(int)slice->at<Vec3b>(a,b)[0];}
+            {   avg+=(int)slice.at<Vec3b>(a,b)[0];}
             else if(color=='e'||color=='E')
-            {   avg+=(int)slice->at<uchar>(a,b);}
+            {   avg+=(int)slice.at<uchar>(a,b);}
 
             //else if(color=='h'||color=='H')
             //{   avg+=(int)hsv.at<Vec3b>(a,b)[0];}
@@ -36,7 +36,7 @@ int image_package_class::avg_color_in_slice(Mat* slice,char color)//color maper 
     
     //hsv.release();
 
-    avg=avg/(slice->rows*slice->cols);
+    avg=avg/(slice.rows*slice.cols);
     return avg;
 }
 
@@ -144,20 +144,295 @@ bool image_package_class::color_distance(image_map_element* origin_element,image
 
 float image_package_class::get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element)
 {
-    //double orig=(int)sobel_plus_edge.at<uchar>(origin_element->row_index,origin_element->col_index);
-    //double new_ele=(int)sobel_plus_edge.at<uchar>(new_element->row_index,new_element->col_index);
-    //double x=abs(orig-new_ele);
     double x=abs(origin_element->avg_border_all-new_element->avg_border_all);
     //double y=-0.04081632653*x+10.40816327;
     //double y=-0.0408*x+10.408;
     //double y=-0.22*x+10;
     float y=-0.18*x+8;
     //float y=-0.11*x+5; 
+
+    //geans problem solution
+    uchar big_slice_size=9;//have odd numbers here for simplisity
+    
+    
     //cout<<"\n\nx="<<x<<" y="<<y;
     if(y>0)
     {   return y;}
     else if(y<=0)
     {   return 0;}
+}
+
+bool image_package_class::border_conflict_status(int img_map_row_index,int img_map_col_index)
+{
+    /*Testing dummy data*/
+    vector<vector<image_map_element*>> dummy_image_map;
+    cout<<endl;
+    for(int a=0;a<20;a++)
+    {
+        vector<image_map_element*> dummy_element_vec;
+        for(int b=0;b<20;b++)
+        {
+            image_map_element* dummy_element=new image_map_element();
+            //top
+            if(a>=0 && a<9 && b==9)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            if(a>=0 && a<9 && b==10)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            if(a>=0 && a<9 && b==11)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            //bottom
+            if(a>11 && b==11)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            if(a>11 && b==10)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            //right
+            else if(b>11 && a==8)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            else if(b>11 && a==9)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            else if(b>11 && a==10)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            //left
+            else if(b<9 && a==8)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            else if(b<9 && a==9)
+            {   dummy_element->avg_border_low_res=255;}
+            else if(b<9 && a==10)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            else if(b<9 && a==11)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            else if(b<9 && a==12)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            else if(b<9 && a==13)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            else if(b<9 && a==14)
+            {   
+                dummy_element->avg_border_low_res=255;
+            }
+            else
+            {   /*cout<<"x ";*/}
+            dummy_element_vec.push_back(dummy_element);
+        }
+        dummy_image_map.push_back(dummy_element_vec);
+        //cout<<endl;
+    }
+    image_map=dummy_image_map;
+    img_map_row_index=10;
+    img_map_col_index=10;//dummy values, coordinates for the origin cell
+    //int gh;cin>>gh;
+
+    short int slice_size=9;
+    vector<vector<int>> border_element_vec;
+    int start_row_index=img_map_row_index-(slice_size/2),start_col_index=img_map_col_index-(slice_size/2);
+    int end_row_index=img_map_row_index+(slice_size/2),end_col_index=img_map_col_index+(slice_size/2);
+    //slice size adjustment checkers
+    if(start_row_index<0)
+    {   start_row_index=0;}
+    if(start_col_index<0)
+    {   start_col_index=0;}
+    if(end_row_index>=image_map.size())
+    {   end_row_index=image_map.size()-1;}
+    if(end_col_index>=image_map.size())
+    {   end_col_index>=image_map.at(0).size()-1;}
+    //for detecting all the border elements
+    for(int a=start_row_index;a<end_row_index;a++)
+    {
+        for(int b=start_col_index;b<end_col_index;b++)
+        {
+            if(!(a==img_map_row_index && b==img_map_col_index) && //to avoid checking the origin cell
+                 image_map.at(a).at(b)->avg_border_low_res==255)//for border element
+            {
+                vector<int> border_element_co_ordinates(2);
+                border_element_co_ordinates[0]=a;//y,col image_map is in row,col format which is y,x in terms of the img
+                border_element_co_ordinates[1]=b;//x,row
+                border_element_vec.push_back(border_element_co_ordinates);
+            }
+        }
+    }cout<<"\n\n size="<<border_element_vec.size();
+    //all is well till here
+
+    //for detecting the visible border elements
+    struct cell_stat
+    {
+        bool horizontal_check=false,vertical_check=false;
+        int row_index,col_index;
+    };
+    vector<deque<cell_stat>> cell_stat_map;
+    //horizontal check scanner |
+    class slant_check
+    {
+        public:   
+        bool check_slant(int new_cell_row_index,int new_cell_col_index,int img_map_row_index,int img_map_col_index,vector<vector<image_map_element*>> &image_map)
+        {
+            bool directions[8]={false};//Direction order W,NW,N,NE,E,SE,S,SW
+                                                       //0,01,2,03,4,05,6,07                                                
+            //vertical directions
+            int count1=0;
+            if(new_cell_row_index>img_map_row_index)//origin is north of new element
+            {   directions[2]=true;count1++;}
+            else if(new_cell_row_index<img_map_row_index)//origin is south of new element
+            {   directions[6]=true;count1++;}
+            //horizontal directions
+            if(new_cell_col_index>img_map_col_index)//origin is west of new element
+            {   directions[0]=true;count1++;}
+            else if(new_cell_col_index<img_map_col_index)//origin is east of new element
+            {   directions[4]=true;count1++;}
+            //composite directions
+            if(directions[2]==true && directions[0]==true)//north-west
+            {   directions[1]=true;}
+            else if(directions[2]==true && directions[4]==true)//north-east
+            {   directions[3]=true;}
+            else if(directions[6]==true && directions[4]==true)//south-east
+            {   directions[5]=true;}
+            else if(directions[6]==true && directions[0]==true)//south-west
+            {   directions[7]=true;}
+            
+            if(count1!=2)
+            {   return false;}
+            else
+            {
+                int count2=0;
+                int delta_co_ordinates[8][2]={{0,-1},{-1,-1},{-1,0},{-1,1},{0,1},{1,1},{1,0},{1,-1}};//follows the above direction convetion
+                for(int a=0;a<8;a++)
+                {
+                    if(directions[a]==true &&
+                       image_map.at(new_cell_row_index+delta_co_ordinates[a][0]).at(new_cell_col_index+delta_co_ordinates[a][1])->avg_border_low_res!=255)
+                    {   count2++;}
+                }
+                if(count2>=2)
+                {   return true;}
+                else
+                {   return false;}
+            }
+        }
+    }slant_checker;
+    for(int a=start_row_index;a<=end_row_index;a++)
+    {    
+        //left check
+        deque<cell_stat> cell_stat_row;
+        bool found=false;
+        for(int b=img_map_col_index;b>=start_col_index;b--)
+        {
+            cell_stat new_stat;
+            if(image_map.at(a).at(b)->avg_border_low_res==255 && (found==false||slant_checker.check_slant(a,b,img_map_row_index,img_map_col_index,image_map)==true)==true)
+            {   new_stat.horizontal_check=true;found=true;}
+            new_stat.col_index=b;
+            new_stat.row_index=a;
+            cell_stat_row.push_front(new_stat);
+        }
+        //right check
+        found=false;
+        for(int b=img_map_col_index+1;b<=end_col_index;b++)
+        {
+            cell_stat new_stat;
+            if(image_map.at(a).at(b)->avg_border_low_res==255 && (found==false||slant_checker.check_slant(a,b,img_map_row_index,img_map_col_index,image_map)==true)==true)
+            {   new_stat.horizontal_check=true;found=true;}
+            new_stat.col_index=b;
+            new_stat.row_index=a;
+            cell_stat_row.push_back(new_stat);
+        }
+        cell_stat_map.push_back(cell_stat_row);
+    }
+    //vertical check scanner --
+    int a_count=0,b_count=0;
+    for(int a=start_col_index;a<=end_col_index;a++)
+    {    
+        //top check
+        bool found=false;
+        b_count=cell_stat_map.size()/2;
+        for(int b=img_map_row_index;b>=start_row_index;b--)
+        {
+            if(image_map.at(b).at(a)->avg_border_low_res==255 && (found==false||slant_checker.check_slant(b,a,img_map_row_index,img_map_col_index,image_map)==true)==true)
+            {   cell_stat_map.at(b_count).at(a_count).vertical_check=true;found=true;}
+            b_count--;
+        }
+        //bottom check
+        found=false;
+        b_count=cell_stat_map.size()/2;
+        for(int b=img_map_row_index;b<=end_row_index;b++)
+        {
+            if(image_map.at(b).at(a)->avg_border_low_res==255 && (found==false||slant_checker.check_slant(b,a,img_map_row_index,img_map_col_index,image_map)==true)==true)
+            {   cell_stat_map.at(b_count).at(a_count).vertical_check=true;found=true;}
+            b_count++;
+        }
+        a_count++;
+    }
+    
+    cout<<"\n\nOriginal mat-\n";
+    for(int a=0;a<image_map.size();a++)
+    {
+        for(int b=0;b<image_map.at(a).size();b++)
+        {
+            if(image_map.at(a).at(b)->avg_border_low_res==255)
+            {   cout<<"b ";}
+            else if(a==img_map_row_index && b==img_map_col_index)
+            {   cout<<"o ";}
+            else
+            {   cout<<"x ";}
+        }
+        cout<<endl;
+    }
+    cout<<"\n\nbig slice elements only-\n";
+    for(int a=0;a<dummy_image_map.size();a++)
+    {
+        for(int b=0;b<dummy_image_map.at(a).size();b++)
+        {
+            bool border_stat=false;
+            for(int c=0;c<border_element_vec.size();c++)
+            {
+                if(a==border_element_vec.at(c).at(0) && b==border_element_vec.at(c).at(1))
+                {   cout<<"b ";border_stat=true;break;}
+            }
+            if(a==img_map_row_index && b==img_map_col_index)
+            {   cout<<"o ";}
+            else if(border_stat==false)
+            {   cout<<"x ";}
+            
+        }
+        cout<<endl;
+    }
+    cout<<"\n\nvisible elements-\n";
+    for(int a=0;a<cell_stat_map.size();a++)
+    {
+        for(int b=0;b<cell_stat_map.at(a).size();b++)
+        {
+            if(cell_stat_map.at(a).at(b).horizontal_check==true && cell_stat_map.at(a).at(b).vertical_check==true)
+            {   cout<<"b ";}
+            else if(cell_stat_map.at(a).at(b).row_index==img_map_row_index && cell_stat_map.at(a).at(b).col_index==img_map_col_index)
+            {   cout<<"o ";}
+            else
+            {   cout<<"x ";}
+        }
+        cout<<endl;
+    }
+    
+    int gh;cin>>gh;
 }
 
 void image_package_class::search_for_neighbour(image_map_element* element,vector<vector<int>>* result)//color maper function//ok tested
@@ -173,11 +448,13 @@ void image_package_class::search_for_neighbour(image_map_element* element,vector
         if(new_col_index>=0 && new_row_index>=0 && new_row_index<image_map.size() && new_col_index<image_map.at(new_row_index).size())
         {
             if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance(element,image_map.at(new_row_index).at(new_col_index))==true)//<=color_sensitiviy
-            //if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance2(element,image_map.at(new_row_index).at(new_col_index))>=percentage_of_close_pixels)
             {
-                co_ordinate.at(0)=new_row_index;
-                co_ordinate.at(1)=new_col_index;
-                result->push_back(co_ordinate);
+                if(image_map.at(new_row_index).at(new_col_index)->avg_border_low_res==255||border_conflict_status(new_row_index,new_col_index)==false)
+                {
+                    co_ordinate.at(0)=new_row_index;
+                    co_ordinate.at(1)=new_col_index;
+                    result->push_back(co_ordinate);
+                }
             }
         }
     }
@@ -215,18 +492,18 @@ void image_package_class::create_color_maps()//color maper function//ok tested
             image_map_element *element=new image_map_element();
             element->col_index=b;
             element->row_index=a;
-            Mat* slice=new Mat();
-            Mat ROI(*orig_image_temp,Rect(startx,starty,slice_row_size,slice_col_size));
-            ROI.copyTo(*slice);
-            element->avg_blue=avg_color_in_slice(slice,'b');
-            element->avg_green=avg_color_in_slice(slice,'g');
-            element->avg_red=avg_color_in_slice(slice,'r');
+            Mat ROI1(*orig_image_temp,Rect(startx,starty,slice_row_size,slice_col_size));
+            element->avg_blue=avg_color_in_slice(ROI1,'b');
+            element->avg_green=avg_color_in_slice(ROI1,'g');
+            element->avg_red=avg_color_in_slice(ROI1,'r');
+            ROI1.release();
             Mat ROI2(sobel_plus_edge,Rect(startx,starty,slice_row_size,slice_col_size));
-            element->avg_border_all=avg_color_in_slice(&ROI2,'e');
+            element->avg_border_all=avg_color_in_slice(ROI2,'e');
+            ROI2.release();
+            Mat ROI3(low_res_edge,Rect(startx,starty,slice_row_size,slice_col_size));
+            element->avg_border_low_res=avg_color_in_slice(ROI3,'e');
+            ROI3.release();
             //element->avg_hue=avg_color_in_slice(slice,'h');
-
-            slice->release();
-            delete slice;
             startx+=slice_row_size;
             map_row_temp.push_back(element);
         }
@@ -1326,9 +1603,6 @@ void image_package_class::modified_sobel_process_handler()
     sobel_binary_map.clear();
     edge_vec.clear();
     
-    //imshow("small",src_edge_plot);
-    //waitKey(0);
-    //int gh;cin>>gh;
     Mat temp(sobel_result.size(),CV_8U,Scalar(0));
     for(int a=0;a<small_src_edge_plot.rows;a++)
     {
@@ -1343,6 +1617,8 @@ void image_package_class::modified_sobel_process_handler()
     }
     //sobel_plus_edge=small_src_edge_plot.clone();
     //sobel_plus_edge=src_edge_plot.clone();
+    low_res_edge=small_src_edge_plot.clone();
+    high_res_edge=src_edge_plot.clone();
     sobel_plus_edge=sobel_result.clone();
     //sobel_plus_edge=temp.clone();
     //temp.release();
@@ -1414,9 +1690,11 @@ void image_package_class::start_data_preparation_process()
         }
         modified_sobel_process_handler();
         //cout<<"\n\nx="<<sobel.cols<<" y="<<sobel.rows;
-        imwrite("modified_sobel2_result.jpg",sobel_plus_edge);
+        imwrite("sobel_plus_edge.jpg",sobel_plus_edge);
+        imwrite("low_res_edge.jpg",low_res_edge);
         create_color_maps();
         sobel_plus_edge.release();
+        low_res_edge.release();
         //cout<<"\nx2="<<image_map[0].size()<<" y2="<<image_map.size();
         auto stop2 = high_resolution_clock::now(); 
         if(perform_time_analysis==true)
@@ -1427,6 +1705,8 @@ void image_package_class::start_data_preparation_process()
         auto start3 = high_resolution_clock::now(); 
         cout<<"\nstrict process...";
         //similar_obj_combination_process_strict();//no data leakage till here
+        imwrite("high_res_edge.jpg",high_res_edge);
+        high_res_edge.release();
         auto stop3 = high_resolution_clock::now(); 
         if(perform_time_analysis==true)
         {

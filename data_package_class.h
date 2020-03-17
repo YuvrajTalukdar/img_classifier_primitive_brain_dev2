@@ -86,10 +86,10 @@ class image_package_class
         bool select_status=false;
         bool non_conflict_border_element=false;
         uchar avg_red,avg_green,avg_blue;
-        uchar avg_border_all;
+        uchar avg_border_all,avg_border_low_res;//avg_border_all contains sobel result and avg_border_low_res.
     };
     //these are data vector for ONLY one image.
-    Mat sobel_plus_edge;//required by modified_sobel get_color_sensitivity functionsMat sobel_plus_edge;//required by modified_sobel get_color_sensitivity functions
+    Mat sobel_plus_edge,low_res_edge,high_res_edge;//result from modified_sobel is saved here. get_color_sensitivity function needs them;//required by modified_sobel get_color_sensitivity functions
     vector<vector<image_map_element*>> image_map;//the main img map
     vector<vector<image_map_element*>> obj_vec;//stores the elements making an object area.
     vector<vector<image_map_element*>> border_element_vec;//border elements of each obj without the buffer area
@@ -167,7 +167,7 @@ class image_package_class
     int binary_search_for_strict(int start_index,int end_index,vector<vector<image_map_element*>>* obj_vec_temp,int search_id);
     void similar_obj_combination_process_strict();//ok testing
     //object mapping proceess functions
-    int avg_color_in_slice(Mat* slice,char color);//color maper function//ok tested  
+    int avg_color_in_slice(Mat &slice,char color);//color maper function//ok tested  
     vector<image_map_element*> *obj_elements_vec_ptr;//required for the color distance calculator
     float hue_distance_calc(float hi,float h2);
     bool color_distance(image_map_element* origin_element,image_map_element* new_element);//color maper function//ok tested
@@ -175,6 +175,8 @@ class image_package_class
     void remove_non_free_elements(vector<vector<int>>* result);//color maper function//ok tested
     void create_color_maps();//color maper function//ok tested
     float get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element);
+    //geans problem solution functions
+    bool border_conflict_status(int img_map_row_index,int img_map_col_index);
     //testing functions and variables
     //static void onMouse(int evt,int x,int y,int flags,void* param,void* userdata);
     static void onMouse(int evt,int x,int y,int flags,void* param);
