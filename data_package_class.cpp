@@ -164,7 +164,6 @@ float image_package_class::get_color_sensitivity(image_map_element* origin_eleme
 
 bool image_package_class::border_conflict_status(int img_map_row_index,int img_map_col_index)
 {
-    /*Testing dummy data*/
     vector<vector<image_map_element*>> dummy_image_map;
     cout<<endl;
     for(int a=0;a<20;a++)
@@ -196,10 +195,10 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
                 dummy_element->avg_border_low_res=255;
             }
             //right
-            else if(b>11 && a==8)
+            /*else if(b>11 && a==8)
             {   
                 dummy_element->avg_border_low_res=255;
-            }
+            }*/
             else if(b>11 && a==9)
             {   
                 dummy_element->avg_border_low_res=255;
@@ -209,11 +208,11 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
                 dummy_element->avg_border_low_res=255;
             }
             //left
-            else if(b<9 && a==8)
+            /*else if(b<9 && a==8)
             {   
                 dummy_element->avg_border_low_res=255;
-            }
-            else if(b<9 && a==9)
+            }*/
+            /*else if(b<9 && a==9)
             {   dummy_element->avg_border_low_res=255;}
             else if(b<9 && a==10)
             {   
@@ -226,7 +225,7 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
             else if(b<9 && a==12)
             {   
                 dummy_element->avg_border_low_res=255;
-            }
+            }*/
             else if(b<9 && a==13)
             {   
                 dummy_element->avg_border_low_res=255;
@@ -245,9 +244,9 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
     image_map=dummy_image_map;
     img_map_row_index=10;
     img_map_col_index=10;//dummy values, coordinates for the origin cell
-    //int gh;cin>>gh;
+    //dummy data above
 
-    short int slice_size=9;
+    short int slice_size=9;//the region under this slice is checked for border conflicts. 
     vector<vector<int>> border_element_vec;
     int start_row_index=img_map_row_index-(slice_size/2),start_col_index=img_map_col_index-(slice_size/2);
     int end_row_index=img_map_row_index+(slice_size/2),end_col_index=img_map_col_index+(slice_size/2);
@@ -260,31 +259,17 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
     {   end_row_index=image_map.size()-1;}
     if(end_col_index>=image_map.size())
     {   end_col_index>=image_map.at(0).size()-1;}
-    //for detecting all the border elements
-    for(int a=start_row_index;a<end_row_index;a++)
-    {
-        for(int b=start_col_index;b<end_col_index;b++)
-        {
-            if(!(a==img_map_row_index && b==img_map_col_index) && //to avoid checking the origin cell
-                 image_map.at(a).at(b)->avg_border_low_res==255)//for border element
-            {
-                vector<int> border_element_co_ordinates(2);
-                border_element_co_ordinates[0]=a;//y,col image_map is in row,col format which is y,x in terms of the img
-                border_element_co_ordinates[1]=b;//x,row
-                border_element_vec.push_back(border_element_co_ordinates);
-            }
-        }
-    }cout<<"\n\n size="<<border_element_vec.size();
-    //all is well till here
-
+    
     //for detecting the visible border elements
     struct cell_stat
     {
         bool horizontal_check=false,vertical_check=false;
-        int row_index,col_index;
+        int row_index,col_index;//this are the index for img_map.
+        int x=0,y=0;//this co-ordinates are for cell_stat_map onlt and not for img_map.
+        bool select_status=false;//rquired by the color mapper for getting the no of sets.
+        int set_id=-1;
     };
     vector<deque<cell_stat>> cell_stat_map;
-    //horizontal check scanner |
     class slant_check
     {
         public:   
@@ -332,6 +317,7 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
             }
         }
     }slant_checker;
+    //horizontal check scanner |
     for(int a=start_row_index;a<=end_row_index;a++)
     {    
         //left check
@@ -383,7 +369,132 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
         }
         a_count++;
     }
-    
+    //till here all the visible border elements will be derected.
+    //for detecting the no of sets in which the visible border elements can be divided. A color mapper can be used here.
+    class set_detection_color_mapper
+    {
+        private:
+        void remove_non_free_elements(vector<deque<cell_stat>> &visible_cells,vector<vector<int>> &result)
+        {
+            vector<bool> free_status(result.size());
+            for(int a=0;a<result.size();a++)
+            {
+                if(visible_cells.at(result.at(a).at(0)).at(result.at(a).at(1)).select_status==true)
+                {   free_status.at(a)=false;}
+                else
+                {   free_status.at(a)=true;}
+            }
+            for(int a=free_status.size()-1;a>=0;a--)
+            {
+                if(free_status.at(a)==false)
+                {   result.erase(result.begin()+a);}
+            }
+        }
+
+        void search_for_neighbour(cell_stat &current_cell,vector<deque<cell_stat>> &visible_cells,vector<vector<int>> &results)
+        {
+            int new_col_index,new_row_index;
+            vector<int> co_ordinates(2);
+            int delta_co_ordinates[8][2]={{0,-1},{0,1},{-1,0},{1,0},{-1,-1},{-1,1},{1,1},{1,-1}};
+            for(int a=0;a<8;a++)
+            {
+                new_col_index=current_cell.x+delta_co_ordinates[a][1];
+                new_row_index=current_cell.y+delta_co_ordinates[a][0];
+                if(new_col_index>=0 && new_row_index>=0 && 
+                new_row_index<visible_cells.size() && 
+                new_col_index<visible_cells.at(new_row_index).size() &&
+                visible_cells.at(new_row_index).at(new_col_index).select_status==false && 
+                visible_cells.at(new_row_index).at(new_col_index).vertical_check==true &&//this condition is already in the color_mapper function*/
+                visible_cells.at(new_row_index).at(new_col_index).horizontal_check==true
+                )
+                {
+                    co_ordinates.at(0)=new_row_index;
+                    co_ordinates.at(1)=new_col_index;
+                    results.push_back(co_ordinates);
+                }
+            }
+        }
+
+        int color_mapper(vector<deque<cell_stat>> &visible_cells)
+        {
+            vector<vector<cell_stat*>> set_vec;
+            set_vec.clear();
+            int set_id=0;
+            vector<vector<int>> result_buffer;
+            vector<vector<int>> result;
+            vector<cell_stat*> cell_ptr_vec;
+            vector<cell_stat> cell_vec;
+            for(int a=0;a<visible_cells.size();a++)
+            {
+                for(int b=0;b<visible_cells.at(a).size();b++)
+                {
+                    if(visible_cells.at(a).at(b).select_status==true || 
+                       (visible_cells.at(a).at(b).horizontal_check==true && visible_cells.at(a).at(b).vertical_check==true)==false)
+                    {   continue;}
+                    
+                    result_buffer.clear();
+                    result.clear();
+                    cell_ptr_vec.clear();
+                    cell_vec.clear();
+                    visible_cells.at(a).at(b).set_id=set_id;
+                    cell_ptr_vec.push_back(&visible_cells.at(a).at(b));
+                    visible_cells.at(a).at(b).select_status=true;
+                    search_for_neighbour(visible_cells.at(a).at(b),visible_cells,result);
+                    //cout<<"\nr="<<result.size();
+                    point1:
+                    if(result_buffer.size()!=0)
+                    {
+                        visible_cells.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)).set_id=set_id;
+                        cell_ptr_vec.push_back(&visible_cells.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)));
+                        visible_cells.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)).select_status=true;
+                        result.clear();
+                        search_for_neighbour(visible_cells.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)),visible_cells,result);
+                    }
+                    while(result.size()>0)
+                    {
+                        visible_cells.at(result.at(0).at(0)).at(result.at(0).at(1)).set_id=set_id;
+                        cell_ptr_vec.push_back(&visible_cells.at(result.at(0).at(0)).at(result.at(0).at(1)));
+                        visible_cells.at(result.at(0).at(0)).at(result.at(0).at(1)).select_status=true;
+                        int row_index=result.at(0).at(0),col_index=result.at(0).at(1);
+                        if(result.size()>1)
+                        {
+                            for(int c=1;c<result.size();c++)
+                            {   result_buffer.push_back(result.at(c));}
+                        }
+                        result.clear();
+                        search_for_neighbour(visible_cells.at(row_index).at(col_index),visible_cells,result);
+                    }
+                    remove_non_free_elements(visible_cells,result_buffer);
+                    if(result_buffer.size()!=0)
+                    {   goto point1;}
+                    set_id++;
+                    set_vec.push_back(cell_ptr_vec);
+                }
+            }
+            cout<<"\n\n";//for displaying the cell_set co-ordinates.
+            for(int a=0;a<set_vec.size();a++)
+            {
+                for(int b=0;b<set_vec.at(a).size();b++)
+                {
+                    cout<<"("<<set_vec.at(a).at(b)->y<<","<<set_vec.at(a).at(b)->x<<")";
+                }
+                cout<<endl;
+            }
+            return set_vec.size();
+        }
+        public:
+        int get_no_of_sets(vector<deque<cell_stat>> &visible_cells)
+        {   return color_mapper(visible_cells);}
+    }color_mapper;
+    //indexing the cell_stat_map
+    for(int a=0;a<cell_stat_map.size();a++)
+    {
+        for(int b=0;b<cell_stat_map.at(a).size();b++)
+        {
+            cell_stat_map.at(a).at(b).y=a;
+            cell_stat_map.at(a).at(b).x=b;
+        }
+    }
     cout<<"\n\nOriginal mat-\n";
     for(int a=0;a<image_map.size();a++)
     {
@@ -395,25 +506,6 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
             {   cout<<"o ";}
             else
             {   cout<<"x ";}
-        }
-        cout<<endl;
-    }
-    cout<<"\n\nbig slice elements only-\n";
-    for(int a=0;a<dummy_image_map.size();a++)
-    {
-        for(int b=0;b<dummy_image_map.at(a).size();b++)
-        {
-            bool border_stat=false;
-            for(int c=0;c<border_element_vec.size();c++)
-            {
-                if(a==border_element_vec.at(c).at(0) && b==border_element_vec.at(c).at(1))
-                {   cout<<"b ";border_stat=true;break;}
-            }
-            if(a==img_map_row_index && b==img_map_col_index)
-            {   cout<<"o ";}
-            else if(border_stat==false)
-            {   cout<<"x ";}
-            
         }
         cout<<endl;
     }
@@ -431,7 +523,7 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
         }
         cout<<endl;
     }
-    
+    cout<<"\n\nno_of_sets="<<color_mapper.get_no_of_sets(cell_stat_map);
     int gh;cin>>gh;
 }
 
@@ -449,7 +541,7 @@ void image_package_class::search_for_neighbour(image_map_element* element,vector
         {
             if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance(element,image_map.at(new_row_index).at(new_col_index))==true)//<=color_sensitiviy
             {
-                if(image_map.at(new_row_index).at(new_col_index)->avg_border_low_res==255||border_conflict_status(new_row_index,new_col_index)==false)
+                if(image_map.at(new_row_index).at(new_col_index)->avg_border_low_res-element->avg_border_low_res==0||border_conflict_status(new_row_index,new_col_index)==false)
                 {
                     co_ordinate.at(0)=new_row_index;
                     co_ordinate.at(1)=new_col_index;
