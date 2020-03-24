@@ -146,9 +146,9 @@ float image_package_class::get_color_sensitivity(image_map_element* origin_eleme
 {
     double x=abs(origin_element->avg_border_all-new_element->avg_border_all);
     //double y=-0.04081632653*x+10.40816327;
-    //double y=-0.0408*x+10.408;
-    //double y=-0.22*x+10;
-    float y=-0.18*x+8;
+    float y=-0.0408*x+10.408;
+    //float y=-0.22*x+10;
+    //float y=-0.18*x+8;
     //float y=-0.11*x+5; 
 
     //geans problem solution
@@ -176,7 +176,7 @@ bool image_package_class::border_conflict_status(int orig_img_map_row_index,int 
     if(end_row_index>=image_map.size())
     {   end_row_index=image_map.size()-1;}
     if(end_col_index>=image_map.size())
-    {   end_col_index>=image_map.at(0).size()-1;}
+    {   end_col_index=image_map.at(0).size()-1;}
     
     //for detecting the visible border elements
     vector<deque<cell_stat>> cell_stat_map;
@@ -261,7 +261,7 @@ bool image_package_class::border_conflict_status(int orig_img_map_row_index,int 
     {    
         //top check
         bool found=false;
-        b_count=cell_stat_map.size()/2;
+        b_count=img_map_row_index-start_row_index;//cell_stat_map.size()/2;
         for(int b=img_map_row_index;b>=start_row_index;b--)
         {
             if(image_map.at(b).at(a)->avg_border_low_res==255 && (found==false||slant_checker.check_slant(b,a,img_map_row_index,img_map_col_index,image_map)==true)==true)
@@ -270,8 +270,8 @@ bool image_package_class::border_conflict_status(int orig_img_map_row_index,int 
         }
         //bottom check
         found=false;
-        b_count=cell_stat_map.size()/2;
-        for(int b=img_map_row_index;b<=end_row_index;b++)
+        b_count=img_map_row_index-start_row_index;//cell_stat_map.size()/2;
+        for(int b=img_map_row_index+1;b<=end_row_index;b++)
         {
             if(image_map.at(b).at(a)->avg_border_low_res==255 && (found==false||slant_checker.check_slant(b,a,img_map_row_index,img_map_col_index,image_map)==true)==true)
             {   cell_stat_map.at(b_count).at(a_count).vertical_check=true;found=true;}
@@ -649,6 +649,7 @@ void image_package_class::create_color_maps()//color maper function//ok tested
                     }
                 }
             //ratio_check_pass
+            ratio_check_pass=false;
             
             //final conflict decission
                 if((quadrant_check_pass==false && ratio_check_pass==false) || //condition 1. Required limit of the obj border reached.
