@@ -166,17 +166,32 @@ class image_package_class
     }sorting_helper1;*/ 
     int binary_search_for_strict(int start_index,int end_index,vector<vector<image_map_element*>>* obj_vec_temp,int search_id);
     void similar_obj_combination_process_strict();//ok testing
+    //geans problem solution functions
+    struct cell_stat
+    {
+        bool horizontal_check=false,vertical_check=false;
+        int row_index,col_index;//this are the index for new_cell in img_map.
+        int x=0,y=0;//this co-ordinates are for new_cell in cell_stat_map only and not for img_map. y=row, x=col.
+        bool select_status=false;//rquired by the color mapper for getting the no of sets.
+        int set_id=-1;
+    };
+    struct conflicting_cell
+    {
+        int row_index,col_index;//this are the index for new_cell in img_map.
+        int x,y;//this co-ordinates are for new_cell in cell_stat_map only and not for img_map. y=row, x=col.
+        int orig_row_index,orig_col_index;//these are for orig element index of whose neighbours are being found.
+        vector<vector<cell_stat>> visible_cell_set_wise;
+    };
+    bool border_conflict_status(int orig_img_map_row_index,int orig_img_map_col_index,int img_map_row_index,int img_map_col_index,vector<conflicting_cell> &potential_conflicting_cell_vec);
     //object mapping proceess functions
     int avg_color_in_slice(Mat &slice,char color);//color maper function//ok tested  
     vector<image_map_element*> *obj_elements_vec_ptr;//required for the color distance calculator
     float hue_distance_calc(float hi,float h2);
     bool color_distance(image_map_element* origin_element,image_map_element* new_element);//color maper function//ok tested
-    void search_for_neighbour(image_map_element* element,vector<vector<int>>* result);//color maper function//ok tested
+    void search_for_neighbour(image_map_element* element,vector<vector<int>>* result,vector<conflicting_cell> &potential_conflicting_cell_vec);//color maper function//ok tested
     void remove_non_free_elements(vector<vector<int>>* result);//color maper function//ok tested
     void create_color_maps();//color maper function//ok tested
     float get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element);
-    //geans problem solution functions
-    bool border_conflict_status(int img_map_row_index,int img_map_col_index);
     //testing functions and variables
     //static void onMouse(int evt,int x,int y,int flags,void* param,void* userdata);
     static void onMouse(int evt,int x,int y,int flags,void* param);

@@ -162,90 +162,8 @@ float image_package_class::get_color_sensitivity(image_map_element* origin_eleme
     {   return 0;}
 }
 
-bool image_package_class::border_conflict_status(int img_map_row_index,int img_map_col_index)
+bool image_package_class::border_conflict_status(int orig_img_map_row_index,int orig_img_map_col_index,int img_map_row_index,int img_map_col_index,vector<conflicting_cell> &potential_conflicting_cell_vec)
 {
-    vector<vector<image_map_element*>> dummy_image_map;
-    cout<<endl;
-    for(int a=0;a<20;a++)
-    {
-        vector<image_map_element*> dummy_element_vec;
-        for(int b=0;b<20;b++)
-        {
-            image_map_element* dummy_element=new image_map_element();
-            //top
-            if(a>=0 && a<9 && b==9)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            if(a>=0 && a<9 && b==10)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            if(a>=0 && a<9 && b==11)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            //bottom
-            if(a>11 && b==11)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            if(a>11 && b==10)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            //right
-            /*else if(b>11 && a==8)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }*/
-            else if(b>11 && a==9)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            else if(b>11 && a==10)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            //left
-            /*else if(b<9 && a==8)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }*/
-            /*else if(b<9 && a==9)
-            {   dummy_element->avg_border_low_res=255;}
-            else if(b<9 && a==10)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            else if(b<9 && a==11)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            else if(b<9 && a==12)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }*/
-            else if(b<9 && a==13)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            else if(b<9 && a==14)
-            {   
-                dummy_element->avg_border_low_res=255;
-            }
-            else
-            {   /*cout<<"x ";*/}
-            dummy_element_vec.push_back(dummy_element);
-        }
-        dummy_image_map.push_back(dummy_element_vec);
-        //cout<<endl;
-    }
-    image_map=dummy_image_map;
-    img_map_row_index=10;
-    img_map_col_index=10;//dummy values, coordinates for the origin cell
-    //dummy data above
-
     short int slice_size=9;//the region under this slice is checked for border conflicts. 
     vector<vector<int>> border_element_vec;
     int start_row_index=img_map_row_index-(slice_size/2),start_col_index=img_map_col_index-(slice_size/2);
@@ -261,14 +179,6 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
     {   end_col_index>=image_map.at(0).size()-1;}
     
     //for detecting the visible border elements
-    struct cell_stat
-    {
-        bool horizontal_check=false,vertical_check=false;
-        int row_index,col_index;//this are the index for img_map.
-        int x=0,y=0;//this co-ordinates are for cell_stat_map onlt and not for img_map.
-        bool select_status=false;//rquired by the color mapper for getting the no of sets.
-        int set_id=-1;
-    };
     vector<deque<cell_stat>> cell_stat_map;
     class slant_check
     {
@@ -374,6 +284,7 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
     class set_detection_color_mapper
     {
         private:
+        vector<vector<cell_stat>> set_vec;
         void remove_non_free_elements(vector<deque<cell_stat>> &visible_cells,vector<vector<int>> &result)
         {
             vector<bool> free_status(result.size());
@@ -417,12 +328,11 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
 
         int color_mapper(vector<deque<cell_stat>> &visible_cells)
         {
-            vector<vector<cell_stat*>> set_vec;
             set_vec.clear();
             int set_id=0;
             vector<vector<int>> result_buffer;
             vector<vector<int>> result;
-            vector<cell_stat*> cell_ptr_vec;
+            vector<cell_stat> cell_ptr_vec;//earlier ptr was used to save space, but now we need the real data due to change in purpose. Name is not changed for convienence.
             vector<cell_stat> cell_vec;
             for(int a=0;a<visible_cells.size();a++)
             {
@@ -437,7 +347,7 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
                     cell_ptr_vec.clear();
                     cell_vec.clear();
                     visible_cells.at(a).at(b).set_id=set_id;
-                    cell_ptr_vec.push_back(&visible_cells.at(a).at(b));
+                    cell_ptr_vec.push_back(visible_cells.at(a).at(b));
                     visible_cells.at(a).at(b).select_status=true;
                     search_for_neighbour(visible_cells.at(a).at(b),visible_cells,result);
                     //cout<<"\nr="<<result.size();
@@ -445,7 +355,7 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
                     if(result_buffer.size()!=0)
                     {
                         visible_cells.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)).set_id=set_id;
-                        cell_ptr_vec.push_back(&visible_cells.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)));
+                        cell_ptr_vec.push_back(visible_cells.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)));
                         visible_cells.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)).select_status=true;
                         result.clear();
                         search_for_neighbour(visible_cells.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)),visible_cells,result);
@@ -453,7 +363,7 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
                     while(result.size()>0)
                     {
                         visible_cells.at(result.at(0).at(0)).at(result.at(0).at(1)).set_id=set_id;
-                        cell_ptr_vec.push_back(&visible_cells.at(result.at(0).at(0)).at(result.at(0).at(1)));
+                        cell_ptr_vec.push_back(visible_cells.at(result.at(0).at(0)).at(result.at(0).at(1)));
                         visible_cells.at(result.at(0).at(0)).at(result.at(0).at(1)).select_status=true;
                         int row_index=result.at(0).at(0),col_index=result.at(0).at(1);
                         if(result.size()>1)
@@ -471,63 +381,58 @@ bool image_package_class::border_conflict_status(int img_map_row_index,int img_m
                     set_vec.push_back(cell_ptr_vec);
                 }
             }
-            cout<<"\n\n";//for displaying the cell_set co-ordinates.
-            for(int a=0;a<set_vec.size();a++)
-            {
-                for(int b=0;b<set_vec.at(a).size();b++)
-                {
-                    cout<<"("<<set_vec.at(a).at(b)->y<<","<<set_vec.at(a).at(b)->x<<")";
-                }
-                cout<<endl;
-            }
             return set_vec.size();
         }
         public:
-        int get_no_of_sets(vector<deque<cell_stat>> &visible_cells)
-        {   return color_mapper(visible_cells);}
+        int get_no_of_sets(vector<deque<cell_stat>> &visible_cells,vector<vector<cell_stat>> &set_vec1)
+        {   
+            set_vec1=set_vec;
+            return color_mapper(visible_cells);
+        }
     }color_mapper;
     //indexing the cell_stat_map
+    int big_cell_central_row_index,big_cell_central_col_index;
     for(int a=0;a<cell_stat_map.size();a++)
     {
         for(int b=0;b<cell_stat_map.at(a).size();b++)
         {
             cell_stat_map.at(a).at(b).y=a;
             cell_stat_map.at(a).at(b).x=b;
+            if(cell_stat_map.at(a).at(b).row_index==img_map_row_index && cell_stat_map.at(a).at(b).col_index==img_map_col_index)
+            {   big_cell_central_row_index=a;big_cell_central_col_index=b;}
         }
     }
-    cout<<"\n\nOriginal mat-\n";
-    for(int a=0;a<image_map.size();a++)
-    {
-        for(int b=0;b<image_map.at(a).size();b++)
+    vector<vector<cell_stat>> set_vec;
+    set_vec.clear();
+    if(color_mapper.get_no_of_sets(cell_stat_map,set_vec)>1)
+    {   
+        bool found=false;
+        for(int a=0;a<potential_conflicting_cell_vec.size();a++)
         {
-            if(image_map.at(a).at(b)->avg_border_low_res==255)
-            {   cout<<"b ";}
-            else if(a==img_map_row_index && b==img_map_col_index)
-            {   cout<<"o ";}
-            else
-            {   cout<<"x ";}
+            if(potential_conflicting_cell_vec.at(a).col_index==img_map_col_index && potential_conflicting_cell_vec.at(a).row_index==img_map_row_index)
+            {   found=true;break;}
         }
-        cout<<endl;
-    }
-    cout<<"\n\nvisible elements-\n";
-    for(int a=0;a<cell_stat_map.size();a++)
-    {
-        for(int b=0;b<cell_stat_map.at(a).size();b++)
+        if(found==false)
         {
-            if(cell_stat_map.at(a).at(b).horizontal_check==true && cell_stat_map.at(a).at(b).vertical_check==true)
-            {   cout<<"b ";}
-            else if(cell_stat_map.at(a).at(b).row_index==img_map_row_index && cell_stat_map.at(a).at(b).col_index==img_map_col_index)
-            {   cout<<"o ";}
-            else
-            {   cout<<"x ";}
+            conflicting_cell potential_conflicting_cell;
+            potential_conflicting_cell.visible_cell_set_wise=set_vec;
+            potential_conflicting_cell.col_index=img_map_col_index;
+            potential_conflicting_cell.row_index=img_map_row_index;
+            potential_conflicting_cell.x=big_cell_central_col_index;
+            potential_conflicting_cell.y=big_cell_central_row_index;
+            potential_conflicting_cell.orig_row_index=orig_img_map_row_index;
+            potential_conflicting_cell.orig_col_index=orig_img_map_col_index;
+            potential_conflicting_cell_vec.push_back(potential_conflicting_cell);
         }
-        cout<<endl;
+        set_vec.clear();
+        cell_stat_map.clear();
+        return true;
     }
-    cout<<"\n\nno_of_sets="<<color_mapper.get_no_of_sets(cell_stat_map);
-    int gh;cin>>gh;
+    else//for 1 and 0
+    {   cell_stat_map.clear();return false;}
 }
 
-void image_package_class::search_for_neighbour(image_map_element* element,vector<vector<int>>* result)//color maper function//ok tested
+void image_package_class::search_for_neighbour(image_map_element* element,vector<vector<int>>* result,vector<conflicting_cell> &potential_conflicting_cell_vec)//color maper function//ok tested
 {
     int col_index=element->col_index,row_index=element->row_index;
     int new_col_index,new_row_index;
@@ -541,7 +446,7 @@ void image_package_class::search_for_neighbour(image_map_element* element,vector
         {
             if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance(element,image_map.at(new_row_index).at(new_col_index))==true)//<=color_sensitiviy
             {
-                if(image_map.at(new_row_index).at(new_col_index)->avg_border_low_res-element->avg_border_low_res==0||border_conflict_status(new_row_index,new_col_index)==false)
+                if(image_map.at(new_row_index).at(new_col_index)->avg_border_low_res-element->avg_border_low_res==0 && border_conflict_status(element->row_index,element->col_index,new_row_index,new_col_index,potential_conflicting_cell_vec)==false)
                 {
                     co_ordinate.at(0)=new_row_index;
                     co_ordinate.at(1)=new_col_index;
@@ -606,6 +511,7 @@ void image_package_class::create_color_maps()//color maper function//ok tested
     }
     //object mapping process
     obj_vec.clear();
+    vector<conflicting_cell> potential_conflicting_cell_vec;
     int obj_index=0;
     for(int a=0;a<image_map.size();a++)//moving through the rows
     {
@@ -625,7 +531,7 @@ void image_package_class::create_color_maps()//color maper function//ok tested
             obj_elements_vec.push_back(image_map.at(a).at(b));
             image_map.at(a).at(b)->select_status=true;
             //for searching and adding the rest of the element in the obj_element_vec
-            search_for_neighbour(image_map.at(a).at(b),&result);
+            search_for_neighbour(image_map.at(a).at(b),&result,potential_conflicting_cell_vec);
             point1:
             if(result_buffer.size()!=0)
             {
@@ -633,7 +539,7 @@ void image_package_class::create_color_maps()//color maper function//ok tested
                 obj_elements_vec.push_back(image_map.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)));
                 image_map.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1))->select_status=true;
                 result.clear();
-                search_for_neighbour(image_map.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)),&result);
+                search_for_neighbour(image_map.at(result_buffer.at(0).at(0)).at(result_buffer.at(0).at(1)),&result,potential_conflicting_cell_vec);
             }
             while(result.size()>0)
             {
@@ -648,9 +554,120 @@ void image_package_class::create_color_maps()//color maper function//ok tested
                     {   result_buffer.push_back(result.at(c));}
                 }
                 result.clear();
-                search_for_neighbour(image_map.at(row_index).at(col_index),&result);
+                search_for_neighbour(image_map.at(row_index).at(col_index),&result,potential_conflicting_cell_vec);
             }
             remove_non_free_elements(&result_buffer);
+            if(result_buffer.size()!=0)
+            {   goto point1;}
+            //conflict state checker
+            bool quadrant_check_pass=true,ratio_check_pass;//small_obj_check_pass;//right now small obj check is not required.
+            for(int c=potential_conflicting_cell_vec.size()-1;c>=0;c--)
+            {
+            //quadrant_check_pass
+                //direction finding part
+                int delta_co_ordinates[8][2]={{0,-1},{-1,-1},{-1,0},{-1,1},{0,1},{1,1},{1,0},{1,-1}};//follows the above direction convetion
+                                            //   W,     NW.     N,    NE,    E,    SE,   S,    SW
+                int dir_row_delta=potential_conflicting_cell_vec.at(c).row_index-potential_conflicting_cell_vec.at(c).orig_row_index,dir_col_delta=potential_conflicting_cell_vec.at(c).col_index-potential_conflicting_cell_vec.at(c).orig_col_index;
+                int perpendicular_row_del,perpendicular_col_del;
+                //perpendicular line delta finding part.
+                for(int d=0;d<8;d++)
+                {
+                    if(delta_co_ordinates[d][0]==dir_row_delta && delta_co_ordinates[d][1]==dir_col_delta)
+                    {
+                        if(d>4)
+                        {
+                            perpendicular_col_del=delta_co_ordinates[d-2][1];
+                            perpendicular_row_del=delta_co_ordinates[d-2][0];
+                        }
+                        else
+                        {
+                            perpendicular_row_del=delta_co_ordinates[d+2][0];
+                            perpendicular_row_del=delta_co_ordinates[d+2][1];
+                        }
+                        break;
+                    }
+                }
+                //prependicular line equation finding part.
+                float perpendicular_m=0;
+                float perpendicular_b;
+                bool greater_than;
+                if(perpendicular_row_del!=0 && perpendicular_col_del!=0)
+                {
+                    perpendicular_m=(perpendicular_col_del)/(perpendicular_row_del);
+                    perpendicular_b=potential_conflicting_cell_vec.at(c).orig_col_index-perpendicular_m*potential_conflicting_cell_vec.at(c).orig_row_index;
+                    if(potential_conflicting_cell_vec.at(c).col_index>perpendicular_m*potential_conflicting_cell_vec.at(c).row_index+perpendicular_b)
+                    {   greater_than=true;}
+                    else
+                    {   greater_than=false;}
+                }
+                else
+                {
+                    if(dir_row_delta>0||dir_col_delta>0)
+                    {   greater_than=true;}
+                    else
+                    {   greater_than=false;}
+                }
+                //quadrant check for each visible elements.
+                if(perpendicular_m==0)
+                {
+                    for(int d=0;d<potential_conflicting_cell_vec.at(c).visible_cell_set_wise.size();d++)
+                    {
+                        for(int e=0;e<potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).size();e++)
+                        {
+                            if(greater_than==true && dir_row_delta>0 && 
+                               potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).at(e).row_index>potential_conflicting_cell_vec.at(c).orig_row_index)
+                            {   quadrant_check_pass=false;break;}
+                            else if(greater_than==true && dir_col_delta>0 && 
+                               potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).at(e).col_index>potential_conflicting_cell_vec.at(c).orig_col_index)
+                            {   quadrant_check_pass=false;break;}
+                            else if(greater_than==false && dir_row_delta<0 && 
+                               potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).at(e).row_index<potential_conflicting_cell_vec.at(c).orig_row_index)
+                            {   quadrant_check_pass=false;break;}
+                            else if(greater_than==false && dir_col_delta<0 && 
+                               potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).at(e).col_index<potential_conflicting_cell_vec.at(c).orig_col_index)
+                            {   quadrant_check_pass=false;break;}
+                        }
+                        if(quadrant_check_pass==false)
+                        {   break;}
+                    }
+                }
+                else
+                {
+                    for(int d=0;d<potential_conflicting_cell_vec.at(c).visible_cell_set_wise.size();d++)
+                    {
+                        for(int e=0;e<potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).size();e++)
+                        {
+                            if(greater_than==true && 
+                               potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).at(e).col_index<(perpendicular_m*potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).at(e).row_index+perpendicular_b))
+                            {   quadrant_check_pass=false;break;}
+                            else if(greater_than==false && 
+                               potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).at(e).col_index>(perpendicular_m*potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(d).at(e).row_index+perpendicular_b))
+                            {   quadrant_check_pass=false;break;}
+                        }
+                        if(quadrant_check_pass==false)
+                        {   break;}
+                    }
+                }
+            //ratio_check_pass
+            
+            //final conflict decission
+                if((quadrant_check_pass==false && ratio_check_pass==false) || //condition 1. Required limit of the obj border reached.
+                    (quadrant_check_pass==true && ratio_check_pass==true))//condition 4. To prevent small objs from spreading.
+                {   potential_conflicting_cell_vec.erase(potential_conflicting_cell_vec.begin()+c);}
+                else if((quadrant_check_pass==false && ratio_check_pass==true) || //contition 2 (for small objs). 
+                         (quadrant_check_pass==true && ratio_check_pass==false))//condition 3 (for normal objs).
+                {
+                    vector<int> co_ordinates(2);
+                    co_ordinates.at(0)=potential_conflicting_cell_vec.at(c).row_index;
+                    co_ordinates.at(1)=potential_conflicting_cell_vec.at(c).col_index;
+                    result_buffer.push_back(co_ordinates);
+                    potential_conflicting_cell_vec.erase(potential_conflicting_cell_vec.begin()+c);
+                    co_ordinates.clear();
+                }
+                else
+                {   cout<<"\nStudy rest of the conditions.";}
+            }
+            potential_conflicting_cell_vec.clear();
             if(result_buffer.size()!=0)
             {   goto point1;}
             obj_index++;
