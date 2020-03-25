@@ -163,7 +163,7 @@ float image_package_class::get_color_sensitivity(image_map_element* origin_eleme
 }
 
 bool image_package_class::border_conflict_status(int orig_img_map_row_index,int orig_img_map_col_index,int img_map_row_index,int img_map_col_index,vector<conflicting_cell> &potential_conflicting_cell_vec)
-{
+{   
     short int slice_size=9;//the region under this slice is checked for border conflicts. 
     vector<vector<int>> border_element_vec;
     int start_row_index=img_map_row_index-(slice_size/2),start_col_index=img_map_col_index-(slice_size/2);
@@ -271,7 +271,7 @@ bool image_package_class::border_conflict_status(int orig_img_map_row_index,int 
         //bottom check
         found=false;
         b_count=img_map_row_index-start_row_index;//cell_stat_map.size()/2;
-        for(int b=img_map_row_index+1;b<=end_row_index;b++)
+        for(int b=img_map_row_index;b<=end_row_index;b++)
         {
             if(image_map.at(b).at(a)->avg_border_low_res==255 && (found==false||slant_checker.check_slant(b,a,img_map_row_index,img_map_col_index,image_map)==true)==true)
             {   cell_stat_map.at(b_count).at(a_count).vertical_check=true;found=true;}
@@ -386,8 +386,10 @@ bool image_package_class::border_conflict_status(int orig_img_map_row_index,int 
         public:
         int get_no_of_sets(vector<deque<cell_stat>> &visible_cells,vector<vector<cell_stat>> &set_vec1)
         {   
+            int no_of_sets=color_mapper(visible_cells);
             set_vec1=set_vec;
-            return color_mapper(visible_cells);
+            //set_vec1.assign(set_vec.begin(),set_vec.end());
+            return no_of_sets;
         }
     }color_mapper;
     //indexing the cell_stat_map
@@ -404,6 +406,7 @@ bool image_package_class::border_conflict_status(int orig_img_map_row_index,int 
     }
     vector<vector<cell_stat>> set_vec;
     set_vec.clear();
+
     if(color_mapper.get_no_of_sets(cell_stat_map,set_vec)>1)
     {   
         bool found=false;
@@ -649,8 +652,41 @@ void image_package_class::create_color_maps()//color maper function//ok tested
                     }
                 }
             //ratio_check_pass
-            ratio_check_pass=false;
-            
+                ratio_check_pass=false;
+                
+                //testing
+                /*if(potential_conflicting_cell_vec.at(c).visible_cell_set_wise.size()>0)
+                {
+                cout<<"\ndir=("<<dir_row_delta<<","<<dir_col_delta<<") big slice state-\n";
+                cout<<"size=="<<potential_conflicting_cell_vec.at(c).visible_cell_set_wise.size()<<endl;
+                int gh;cin>>gh;
+                }*/
+                /*for(int i=0;i<11;i++)
+                {
+                    for(int j=0;j<11;j++)
+                    {
+                        bool f=false;
+                        if(i==potential_conflicting_cell_vec.at(c).y && potential_conflicting_cell_vec.at(c).x==j)
+                        {
+                            cout<<"o ";
+                            continue;
+                        }
+                        for(int k=0;k<potential_conflicting_cell_vec.at(c).visible_cell_set_wise.size();k++)
+                        {
+                            for(int l=0;l<potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(k).size();l++)
+                            {
+                                if(potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(k).at(l).y==j && potential_conflicting_cell_vec.at(c).visible_cell_set_wise.at(k).at(l).x==i)
+                                {   cout<<"b ";f=true;break;}
+                            }
+                            if(f==true)
+                            {   break;}
+                        }
+                        if(f==false)
+                        {   cout<<"x ";}
+                    }
+                    cout<<endl;
+                }
+                int gh;cin>>gh;*/
             //final conflict decission
                 if((quadrant_check_pass==false && ratio_check_pass==false) || //condition 1. Required limit of the obj border reached.
                     (quadrant_check_pass==true && ratio_check_pass==true))//condition 4. To prevent small objs from spreading.
