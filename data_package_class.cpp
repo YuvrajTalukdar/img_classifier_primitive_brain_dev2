@@ -164,7 +164,7 @@ float image_package_class::get_color_sensitivity(image_map_element* origin_eleme
 
 bool image_package_class::border_conflict_status(int orig_img_map_row_index,int orig_img_map_col_index,int img_map_row_index,int img_map_col_index,vector<conflicting_cell> &potential_conflicting_cell_vec)
 {   
-    short int slice_size=9;//the region under this slice is checked for border conflicts. 
+    short int slice_size=15;//the region under this slice is checked for border conflicts. 
     vector<vector<int>> border_element_vec;
     int start_row_index=img_map_row_index-(slice_size/2),start_col_index=img_map_col_index-(slice_size/2);
     int end_row_index=img_map_row_index+(slice_size/2),end_col_index=img_map_col_index+(slice_size/2);
@@ -175,7 +175,7 @@ bool image_package_class::border_conflict_status(int orig_img_map_row_index,int 
     {   start_col_index=0;}
     if(end_row_index>=image_map.size())
     {   end_row_index=image_map.size()-1;}
-    if(end_col_index>=image_map.size())
+    if(end_col_index>=image_map.at(0).size())
     {   end_col_index=image_map.at(0).size()-1;}
     
     //for detecting the visible border elements
@@ -516,12 +516,31 @@ void image_package_class::create_color_maps()//color maper function//ok tested
     obj_vec.clear();
     vector<conflicting_cell> potential_conflicting_cell_vec;
     int obj_index=0;
+    class data_locker
+    {
+        private:
+        int no_of_non_conflict_cells;
+        bool lock=false;
+        public:
+        void unlock()
+        {   lock=false;}
+        
+        void set_no_of_non_conflict_cells(int value)
+        {
+            if(lock==false)
+            {   no_of_non_conflict_cells=value;lock=true;}
+        }
+
+        int return_value()
+        {   return no_of_non_conflict_cells;}
+    }datalock;
     for(int a=0;a<image_map.size();a++)//moving through the rows
     {
         for(int b=0;b<image_map.at(a).size();b++)//moving through the cols
         {
             if(image_map.at(a).at(b)->select_status==true)
             {   continue;}
+            datalock.unlock();
             vector<vector<int>> result_buffer;
             result_buffer.clear();
             vector<vector<int>> result;
@@ -563,6 +582,7 @@ void image_package_class::create_color_maps()//color maper function//ok tested
             if(result_buffer.size()!=0)
             {   goto point1;}
             //conflict state checker
+            datalock.set_no_of_non_conflict_cells(obj_elements_vec.size());
             bool quadrant_check_pass=true,ratio_check_pass;//small_obj_check_pass;//right now small obj check is not required.
             for(int c=potential_conflicting_cell_vec.size()-1;c>=0;c--)
             {
@@ -654,6 +674,31 @@ void image_package_class::create_color_maps()//color maper function//ok tested
             //ratio_check_pass
                 ratio_check_pass=false;
                 
+                int big_slice_size=15;
+                int img_map_start_row_index=potential_conflicting_cell_vec.at(c).row_index-big_slice_size,img_map_start_col_index=potential_conflicting_cell_vec.at(c).col_index-big_slice_size;
+                int img_map_end_row_index=potential_conflicting_cell_vec.at(c).row_index+big_slice_size,img_map_end_col_index=potential_conflicting_cell_vec.at(c).col_index+big_slice_size;
+                if(img_map_start_row_index<0)
+                {   img_map_start_row_index=0;}
+                if(img_map_start_col_index<0)
+                {   img_map_start_col_index=0;}
+                if(img_map_end_row_index>=image_map.size())
+                {   img_map_end_row_index=image_map.size()-1;}
+                if(img_map_end_col_index>=image_map.size())
+                {   img_map_end_col_index=image_map.at(0).size()-1;}
+                int no_of_conflicting_cells_under_big_slice=0;
+                for(int d=0;d<potential_conflicting_cell_vec.size();d++)
+                {
+                    if(potential_conflicting_cell_vec.at(d).row_index>=img_map_start_row_index && potential_conflicting_cell_vec.at(d).row_index<=img_map_end_row_index &&
+                       potential_conflicting_cell_vec.at(d).col_index>=img_map_start_col_index && potential_conflicting_cell_vec.at(d).col_index<=img_map_end_col_index)
+                    {   no_of_conflicting_cells_under_big_slice++;}
+                }
+                float ratio_thershold=0.3;//0.5
+                float ratio=((float)datalock.return_value())/((float)no_of_conflicting_cells_under_big_slice);
+                //cout<<"\nratio="<<ratio<<" a="<<datalock.return_value()<<" b="<<no_of_conflicting_cells_under_big_slice;
+                if(ratio>ratio_thershold)
+                {   ratio_check_pass=true;}
+                else
+                {   ratio_check_pass=false;}
                 //testing
                 /*if(potential_conflicting_cell_vec.at(c).visible_cell_set_wise.size()>0)
                 {
