@@ -170,7 +170,7 @@ void logic_core::train_segment(vector<core_class> &core_vec)
         obj1->obj=image_package_vec[a];
         img_data_preparation_process_handler_vec.push_back(obj1);
     }
-    //running the threads
+    //for data preprocessing in parallel mode. This will start the pre-processing for all the label at once.
     /*
     for(int a=0;a<img_data_preparation_thread.size();a++)
     {   errors[a]=pthread_create(&img_data_preparation_thread[a],NULL,(THREADFUNCPTR)&img_data_preparation_process_handler::slicing_process_handler,img_data_preparation_process_handler_vec[a]);}
@@ -182,6 +182,7 @@ void logic_core::train_segment(vector<core_class> &core_vec)
     for(int a=0;a<img_data_preparation_thread.size();a++)
     {   errors[a]=pthread_join(img_data_preparation_thread[a],NULL);}
     */
+    //For data pre-processing in single threaded mode. This will start the pre-processing one label at a time.
     for(int a=0;a<img_data_preparation_process_handler_vec.size();a++)
     {
         img_data_preparation_process_handler_vec[a]->slicing_process_handler();

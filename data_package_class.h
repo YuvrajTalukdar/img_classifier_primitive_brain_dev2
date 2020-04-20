@@ -8,12 +8,6 @@ Data package class
 #include<iostream>
 #include<fstream>
 #include<string>
-//for memory checking functions---------------------
-//#include <unistd.h>
-//#include <ios>
-//for total amt of memory---------------------------
-//#include "sys/types.h"
-//#include "sys/sysinfo.h"
 //for random generator required for the plot_obj_maps function but looks like without these .h files the program is working.
 #include<stdlib.h>     /* srand, rand */
 #include<time.h>       /* time */

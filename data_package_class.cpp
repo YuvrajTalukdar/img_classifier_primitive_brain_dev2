@@ -144,17 +144,13 @@ bool image_package_class::color_distance(image_map_element* origin_element,image
 
 float image_package_class::get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element)
 {
-    double x=abs(origin_element->avg_border_all-new_element->avg_border_all);
-    //double y=-0.04081632653*x+10.40816327;
-    float y=-0.0408*x+10.408;
+    float x=abs(origin_element->avg_border_all-new_element->avg_border_all);
+    //float y=-0.04081632653*x+10.40816327;
+    //float y=-0.0408*x+10.408;
+    float y=-0.04*x+8;
     //float y=-0.22*x+10;
     //float y=-0.18*x+8;
-    //float y=-0.11*x+5; 
-
-    //geans problem solution
-    uchar big_slice_size=9;//have odd numbers here for simplisity
-    
-    
+    //float y=-0.11*x+5;     
     //cout<<"\n\nx="<<x<<" y="<<y;
     if(y>0)
     {   return y;}
@@ -162,9 +158,9 @@ float image_package_class::get_color_sensitivity(image_map_element* origin_eleme
     {   return 0;}
 }
 
-bool image_package_class::border_conflict_status(int orig_img_map_row_index,int orig_img_map_col_index,int img_map_row_index,int img_map_col_index,vector<conflicting_cell> &potential_conflicting_cell_vec)
+bool image_package_class::border_conflict_status(int orig_img_map_row_index,int orig_img_map_col_index,int img_map_row_index,int img_map_col_index,vector<conflicting_cell> &potential_conflicting_cell_vec)//it searches for visible elements.
 {   
-    short int slice_size=15;//the region under this slice is checked for border conflicts. 
+    short int slice_size=15;//15//the region under this slice is checked for border conflicts. 
     vector<vector<int>> border_element_vec;
     int start_row_index=img_map_row_index-(slice_size/2),start_col_index=img_map_col_index-(slice_size/2);
     int end_row_index=img_map_row_index+(slice_size/2),end_col_index=img_map_col_index+(slice_size/2);
@@ -450,7 +446,7 @@ void image_package_class::search_for_neighbour(image_map_element* element,vector
             if(image_map.at(new_row_index).at(new_col_index)->select_status==false && color_distance(element,image_map.at(new_row_index).at(new_col_index))==true)//<=color_sensitiviy
             {
                 if(image_map.at(new_row_index).at(new_col_index)->avg_border_low_res-element->avg_border_low_res==0 && border_conflict_status(element->row_index,element->col_index,new_row_index,new_col_index,potential_conflicting_cell_vec)==false)
-                {
+                {      
                     co_ordinate.at(0)=new_row_index;
                     co_ordinate.at(1)=new_col_index;
                     result->push_back(co_ordinate);
@@ -672,9 +668,9 @@ void image_package_class::create_color_maps()//color maper function//ok tested
                     }
                 }
             //ratio_check_pass
-                ratio_check_pass=false;
+                //ratio_check_pass=false;
                 
-                int big_slice_size=15;
+                int big_slice_size=15;//15
                 int img_map_start_row_index=potential_conflicting_cell_vec.at(c).row_index-big_slice_size,img_map_start_col_index=potential_conflicting_cell_vec.at(c).col_index-big_slice_size;
                 int img_map_end_row_index=potential_conflicting_cell_vec.at(c).row_index+big_slice_size,img_map_end_col_index=potential_conflicting_cell_vec.at(c).col_index+big_slice_size;
                 if(img_map_start_row_index<0)
@@ -1812,7 +1808,8 @@ void image_package_class::modified_sobel_process_handler()
     high_res_edge=src_edge_plot.clone();
     sobel_plus_edge=sobel_result.clone();
     //sobel_plus_edge=temp.clone();
-    //temp.release();
+    //sobel_plus_edge=high_res_edge.clone();
+    temp.release();
     small_src_edge_plot.release();
     //not used currently under construction
     src_edge_plot.release();
@@ -1828,22 +1825,11 @@ void image_package_class::start_data_preparation_process()
         cout<<"\npath="<<image_paths[a];
         auto start = high_resolution_clock::now(); 
         cout<<"\npreprocessing going on...";
-        //int gh;cin>>gh;
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
         vector<Mat> channels;
         cvtColor(*orig_image_temp,*orig_image_temp,CV_BGR2HSV);
         split(*orig_image_temp,channels);
-        /*
-        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
-        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
-        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
-        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
-
-        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
-        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
-        GaussianBlur(channels[1], channels[1], Size(45,45), 0);
-        */
         merge(channels,*orig_image_temp);
         cvtColor(*orig_image_temp,*orig_image_temp,COLOR_HSV2BGR);
         channels[0].release();
@@ -1880,9 +1866,14 @@ void image_package_class::start_data_preparation_process()
             slice_row_size=percentage+2;
         }
         modified_sobel_process_handler();
-        //cout<<"\n\nx="<<sobel.cols<<" y="<<sobel.rows;
-        imwrite("sobel_plus_edge.jpg",sobel_plus_edge);
-        imwrite("low_res_edge.jpg",low_res_edge);
+        //string name[3]={"high","low","all"};
+        //string str=image_file_name[a]+name[2]+".jpg";
+        //imwrite(str,sobel_plus_edge);
+        //str=image_file_name[a]+name[1]+".jpg";
+        //imwrite(str,low_res_edge);
+        //str=image_file_name[a]+name[0]+".jpg";
+        //imwrite(str,high_res_edge);
+        //continue;
         create_color_maps();
         sobel_plus_edge.release();
         low_res_edge.release();
@@ -1895,8 +1886,7 @@ void image_package_class::start_data_preparation_process()
         }
         auto start3 = high_resolution_clock::now(); 
         cout<<"\nstrict process...";
-        //similar_obj_combination_process_strict();//no data leakage till here
-        imwrite("high_res_edge.jpg",high_res_edge);
+        similar_obj_combination_process_strict();//no data leakage till here
         high_res_edge.release();
         auto stop3 = high_resolution_clock::now(); 
         if(perform_time_analysis==true)
@@ -2076,7 +2066,6 @@ void image_package_class::combine_package_data(vector<image_package_class*> *ipc
     for(int a=0;a<prepared_data_obj.obj_vec_for_each_img.size();a++)
     {   plot_obj_maps(&prepared_data_obj.obj_vec_for_each_img.at(a),&prepared_data_obj.image_map_vec.at(a),image_paths.at(a));}
     clean_image_package_class_entierly(true);
-    //int gh;cin>>gh;
 }
 
 void image_package_class::clean_up_all_the_data_addresses()

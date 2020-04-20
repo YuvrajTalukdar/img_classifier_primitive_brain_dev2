@@ -1,12 +1,8 @@
-#include<iostream>
-#include<string.h>
-
-#include"dependency_functions.h"
-
-using namespace std;
+#include"brain_class.h"
 
 int main()
 {
-    brain_starter();
+    brain_class brain_obj;
+    brain_obj.initialize_brain();
     return 0;
 }
