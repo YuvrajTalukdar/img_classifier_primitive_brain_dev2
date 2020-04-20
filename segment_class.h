@@ -5,8 +5,8 @@
 #include<vector>
 
 #include"logic_core.h"
-//#include"core_class.h"
-//#include"data_package_class.h"
+#include"core_class.h"
+
 using namespace std;
 
 class segment_class{

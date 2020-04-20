@@ -17,7 +17,7 @@ core class handles natural cores
 #include<sys/ioctl.h>//for the terminal size
 
 #include"neuron_and_ann_class.h"
-//#include"data_package_class.h"
+//#include"nn_core_data_package_class.h"
 
 typedef void * (*THREADFUNCPTR)(void *);
 
@@ -224,7 +224,7 @@ struct network_structure_defination{
 class core_class{
     private:
     //core_data_for_multithreading
-    data_package_class* data_pack;
+    nn_core_data_package_class* data_pack;
     int train_test_predict;
     float data_division1;
     string network_save_file_name;
@@ -244,7 +244,7 @@ class core_class{
     datapack_structure_defination ds;
     network_structure_defination ns;
 
-    bool check_if_datapack_has_valid_labels(data_package_class* data_pack);//if a label is 0 than it is invalid
+    bool check_if_datapack_has_valid_labels(nn_core_data_package_class* data_pack);//if a label is 0 than it is invalid
 
     void save_network();
 
@@ -252,7 +252,7 @@ class core_class{
 
     void network_analyzer();
 
-    void datapack_analyzer(data_package_class* data_pack);//checked, it fills up the datapack_structure_defination ds. 
+    void datapack_analyzer(nn_core_data_package_class* data_pack);//checked, it fills up the datapack_structure_defination ds. 
 
     void network_structure_modifier();//this function may need further improvements
 
@@ -261,15 +261,15 @@ class core_class{
         int temp_label;
     };
 
-    void shuffler(filtered_data* f_data);
+    void shuffler(nn_core_filtered_data* f_data);
 
-    void f_data_viewer(string str,vector<filtered_data> f_data);
+    void f_data_viewer(string str,vector<nn_core_filtered_data> f_data);
 
-    void filter(data_package_class* data_pack,int train_test_predict);
+    void filter(nn_core_data_package_class* data_pack,int train_test_predict);
 
     void big_c_datapack_handler(vector<converted_data_pack> &cdp);//passing the vector by reference //this function might be a temporary offer //this is for preventing 0:0 bug
 
-    void simplex_solver_data_entry_point(vector<filtered_data> f_data_pack,datapack_structure_defination* ds);
+    void simplex_solver_data_entry_point(vector<nn_core_filtered_data> f_data_pack,datapack_structure_defination* ds);
 
     void display_training_progress();
 
@@ -279,20 +279,20 @@ class core_class{
 
     bool ds_ns_have_same_labels();
 
-    vector<filtered_data> f_train_data;//f_test_data; //memory_optimization1
-    data_package_class test_data;
+    vector<nn_core_filtered_data> f_train_data;//f_test_data; //memory_optimization1
+    nn_core_data_package_class test_data;
 
-    void train(data_package_class* data_pack,bool network_avail_status,int train_test_predict);//there cannot be a case of invalid network and data without labels.
+    void train(nn_core_data_package_class* data_pack,bool network_avail_status,int train_test_predict);//there cannot be a case of invalid network and data without labels.
 
     void test();//parameters not required now
     //memory_optimization1
     void testing_for_each_label(/*,int train_test_predict*/);
     
-    void only_testing(data_package_class* data_pack,int train_test_predict);
+    void only_testing(nn_core_data_package_class* data_pack,int train_test_predict);
 
     void predict_progress_bar();
 
-    void predict(data_package_class* data_pack);
+    void predict(nn_core_data_package_class* data_pack);
 
     void make_prediction_on_user_entered_data();
 
@@ -304,7 +304,7 @@ class core_class{
 
     void start_core();//train_test_predict=1//train_test_predic is required for extra assurance
 
-    void add_data(data_package_class* data_pack,int train_test_predict,float data_division1,string network_save_file_name);
+    void add_data(nn_core_data_package_class* data_pack,int train_test_predict,float data_division1,string network_save_file_name);
     
     string return_name()
     {   return core_name;}

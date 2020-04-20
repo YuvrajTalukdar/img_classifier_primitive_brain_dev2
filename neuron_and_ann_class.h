@@ -11,7 +11,7 @@ ANN class
 #include<string.h>
 #include<math.h>
 #include<pthread.h>
-#include"data_package_class.h"
+#include"neural_network_core_data_package_class.h"
 
 using namespace std;
 
@@ -80,8 +80,8 @@ class ann{
     
     public:
     vector<float> elements;
-    vector<filtered_data> f_data_vec_for_elimination_algorithm;
-    void set_data_for_elimination_algorithm(vector<filtered_data> f_data_vec)
+    vector<nn_core_filtered_data> f_data_vec_for_elimination_algorithm;
+    void set_data_for_elimination_algorithm(vector<nn_core_filtered_data> f_data_vec)
     {   f_data_vec_for_elimination_algorithm=f_data_vec;}
 
     void set_elements_vector(vector<float> e)

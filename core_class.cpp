@@ -1167,7 +1167,7 @@ simplex_solver_data_preparation_class::simplex_solver_data_preparation_class(vec
 
 
 //core_class
-bool core_class::check_if_datapack_has_valid_labels(data_package_class* data_pack)
+bool core_class::check_if_datapack_has_valid_labels(nn_core_data_package_class* data_pack)
 {
     if(data_pack->data.size()>data_pack->labels.size())
     {   return false;}
@@ -1569,7 +1569,7 @@ void core_class::network_analyzer()
     ns.mean_buffer_size=network1.input_neurons.size();//what the fuck is this????
 }
 
-void core_class::datapack_analyzer(data_package_class* data_pack)
+void core_class::datapack_analyzer(nn_core_data_package_class* data_pack)
 {
     if(data_pack->analyze_status==false)
     {
@@ -1619,7 +1619,7 @@ void core_class::network_structure_modifier()
     {   cout<<s<<endl;}
 }
 
-void core_class::shuffler(filtered_data* f_data)
+void core_class::shuffler(nn_core_filtered_data* f_data)
 {
     vector<shuffling_data> shuffling_data_temp_vector;
     shuffling_data shuffling_data_temp;
@@ -1642,7 +1642,7 @@ void core_class::shuffler(filtered_data* f_data)
     }
 }
 
-void core_class::f_data_viewer(string str,vector<filtered_data> f_data)
+void core_class::f_data_viewer(string str,vector<nn_core_filtered_data> f_data)
 {
     message.clear();
     message="\n"+str+"\n";
@@ -1655,10 +1655,10 @@ void core_class::f_data_viewer(string str,vector<filtered_data> f_data)
     }
 }
 
-void core_class::filter(data_package_class* data_pack,int train_test_predict)
+void core_class::filter(nn_core_data_package_class* data_pack,int train_test_predict)
 {
-    filtered_data f_data;
-    vector<filtered_data> f_data_vector;
+    nn_core_filtered_data f_data;
+    vector<nn_core_filtered_data> f_data_vector;
     for(int a=0;a<ds.elements.size();a++)
     {
         f_data.data.clear();
@@ -1681,7 +1681,7 @@ void core_class::filter(data_package_class* data_pack,int train_test_predict)
     //copying the data to f_train_data and f_test_data
     for(int a=0;a<f_data_vector.size();a++)
     {
-        filtered_data f_data_temp;
+        nn_core_filtered_data f_data_temp;
         //copying data to f_train_data
         int limit=0;
         if(train_test_predict==0)//for training
@@ -1846,7 +1846,7 @@ void core_class::big_c_datapack_handler(vector<converted_data_pack> &cdp)//passi
     print_message();
 }
 
-void core_class::simplex_solver_data_entry_point(vector<filtered_data> f_data_pack,datapack_structure_defination* ds)
+void core_class::simplex_solver_data_entry_point(vector<nn_core_filtered_data> f_data_pack,datapack_structure_defination* ds)
 {
     vector<converted_data_pack> c_datapacks;
     converted_data_pack c_datapack;
@@ -2178,14 +2178,14 @@ bool core_class::ds_ns_have_same_labels()
     {   return false;}//means current ds is different from previous ds which was used to train the network
 }
 
-void core_class::train(data_package_class* data_pack,bool network_avail_status,int train_test_predict)
+void core_class::train(nn_core_data_package_class* data_pack,bool network_avail_status,int train_test_predict)
 {
     datapack_analyzer(data_pack);//function checked!
     //filtering data according to labels
     filter(data_pack,train_test_predict);//f_train_data pack gets created here.
     //memory_optimization5 : the next two lines are added
-    vector<filtered_data> f_data_for_elimination_algorithm;
-    filtered_data f_data_temp;
+    vector<nn_core_filtered_data> f_data_for_elimination_algorithm;
+    nn_core_filtered_data f_data_temp;
     int limit_for_elimination_algorithm=50;
     for(int a=0;a<f_train_data.size();a++)
     {
@@ -2275,7 +2275,7 @@ void core_class::train(data_package_class* data_pack,bool network_avail_status,i
     }
 }
 
-void core_class::only_testing(data_package_class* data_pack,int train_test_predict)
+void core_class::only_testing(nn_core_data_package_class* data_pack,int train_test_predict)
 {
     datapack_analyzer(data_pack);//function checked!
     //filtering data according to labels
@@ -2319,8 +2319,8 @@ void core_class::test()
 void core_class::testing_for_each_label()
 {
     cout<<"wrights="<<network1.return_no_of_paths();
-    filtered_data f_data;
-    vector<filtered_data> f_test_data;
+    nn_core_filtered_data f_data;
+    vector<nn_core_filtered_data> f_test_data;
     for(int a=0;a<ds.elements.size();a++)
     {
         f_data.data.clear();
@@ -2388,7 +2388,7 @@ void core_class::predict_progress_bar()
     }
 }
 
-void core_class::predict(data_package_class* data_pack)
+void core_class::predict(nn_core_data_package_class* data_pack)
 {
     cout<<"\nprediction going on......";
     ofstream out_stream("prediction_result.csv",ios::out);
@@ -2557,7 +2557,7 @@ void core_class::start_core()//train_test_predict=1//train_test_predic is requir
     }
 }
 
-void core_class::add_data(data_package_class* data_pack1,int train_test_predict1,float data_division2,string network_save_file_name1)
+void core_class::add_data(nn_core_data_package_class* data_pack1,int train_test_predict1,float data_division2,string network_save_file_name1)
 {
     data_pack=data_pack1;
     train_test_predict=train_test_predict1;

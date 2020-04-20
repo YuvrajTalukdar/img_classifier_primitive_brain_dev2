@@ -6,9 +6,9 @@
 #include<string.h>
 #include<vector>
 #include<dirent.h>
+#include<thread>
 
-#include"core_class.h"
-#include"data_package_class.h"
+#include"image_package_class.h"
 //#include"core_class.h"
 
 using namespace cv;
@@ -41,7 +41,7 @@ class logic_core
     void fix_first_read_dir_name(string &str);//called from read_image_data function        
     public:
     //training functions
-    void train_segment(vector<core_class> &core_vec);
+    void train_segment(/*vector<core_class> &core_vec*/);
     //image_meta data reader
     bool read_image_data();
     //logic core metadata loadeing functions

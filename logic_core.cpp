@@ -4,9 +4,8 @@ using namespace std;
 
 void img_data_preparation_process_handler::slicing_process_handler()
 {
-    int no_of_physical_threads=sysconf(_SC_NPROCESSORS_ONLN);
+    short int no_of_physical_threads=thread::hardware_concurrency();
     vector<image_package_class*> ipc_vec;
-    //ipc_vec.push_back(obj);
     //creation of objs for threads
     obj->enter_training_critical_variables(no_of_sq_areas_need_to_be_checked_for_avg_color,color_sensitivity,color_sensitivity2,min_size_of_obj);
     for(int a=0;a<no_of_physical_threads-1;a++)
@@ -21,21 +20,21 @@ void img_data_preparation_process_handler::slicing_process_handler()
     for(int a=0;a<ipc_vec.size();a++)
     {   cout<<"\nno of img in vec="<<ipc_vec.at(a)->return_no_of_images();}
     //threading process
-    cout<<"\ndata preparation thread running...";
-    vector<pthread_t> img_data_preparation_thread(ipc_vec.size());
-    vector<int> errors(ipc_vec.size());
         //running the threads
     cout<<"\nstart!!";
     int gh;cin>>gh;
-    for(int a=0;a<img_data_preparation_thread.size();a++)
-    {   errors[a]=pthread_create(&img_data_preparation_thread[a],NULL,(THREADFUNCPTR)&image_package_class::start_data_preparation_process,ipc_vec.at(a));}
-    for(int a=0;a<img_data_preparation_thread.size();a++)
-    {
-        if(errors[a])
-        {   cout<<"\nThread "<<a<<" creation failed : "<<strerror(errors[a]);}
+    vector<thread*> thread_vec;
+    for(int a=0;a<ipc_vec.size();a++)
+    {   
+        thread* worker_thread=new thread(&image_package_class::start_data_preparation_process,ipc_vec.at(a));
+        thread_vec.push_back(worker_thread);
     }
-    for(int a=0;a<img_data_preparation_thread.size();a++)
-    {   errors[a]=pthread_join(img_data_preparation_thread[a],NULL);}
+    for(int a=0;a<ipc_vec.size();a++)
+    {   
+        thread_vec.at(a)->join();
+        delete thread_vec.at(a);
+    }
+    thread_vec.clear();
     //data combining process
     ipc_vec.pop_back();
     //obj->combine_package_data(&ipc_vec);//this function is not used currently but will be used once the final result is arrived
@@ -153,7 +152,7 @@ bool logic_core::read_image_data()
     }
 }
 
-void logic_core::train_segment(vector<core_class> &core_vec)
+void logic_core::train_segment(/*vector<core_class> &core_vec*/)
 {
     cout<<"\n\nsize= "<<image_package_vec.size();    
     //creating the threads and preparation of the process handler for preparation of fata of each label
