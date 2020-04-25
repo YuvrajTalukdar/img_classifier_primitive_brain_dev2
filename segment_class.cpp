@@ -110,13 +110,6 @@ bool segment_class::return_input_file_reader_status()
 
 void segment_class::segment_process_handler()
 {      
-    if(return_input_file_reader_status()==true)
-    {   logic_core_obj.read_image_data();}
-    //logic_core_obj.load_img_data_into_cores(cores);
-    logic_core_obj.train_segment(/*cores*/);
-
-    //for(int a=0;a<cores.size();a++)
-    //{   free(&cores[a]);}
     cores.clear();
     //under construction
 }

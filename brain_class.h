@@ -44,6 +44,8 @@ class brain_class{
     int brain_state_file_chooser(vector<brain_state_file_identifier> brain_state_file_identifier_vec);
     bool load_brain_architectue_map_file_if_found(bool &close_status);
     bool check_availability_of_core_filename();
+    //data classes handler
+    void parallel_ipc_handler();
     
     void brain_process_handler();
 

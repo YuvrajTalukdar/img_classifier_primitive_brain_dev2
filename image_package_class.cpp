@@ -1976,19 +1976,11 @@ void image_package_class::clean_up_prepared_data_obj()
     prepared_data_obj.obj_vec_for_each_img.clear();
 }
 
-void image_package_class::enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color1,float color_sensi,float color_sensi2,int min_size_of_obj1)
+void image_package_class::enter_training_critical_variables(float color_sensi,float color_sensi2,int min_size_of_obj1)
 {
     min_size_of_obj=min_size_of_obj1;
     color_sensitiviy=color_sensi;
     color_sensitivity2=color_sensi2;
-    no_of_sq_areas_need_to_be_checked_for_avg_color=no_of_sq_areas_need_to_be_checked_for_avg_color1;
-}
-
-void image_package_class::enter_image_metadata(string img_name,string img_path)
-{   
-    image_file_name.push_back(img_name);
-    image_paths.push_back(img_path);
-    //cout<<"\npath="<<img_path;
 }
 
 void image_package_class::enter_image_metadata(int id_,string label_,string dir_path_)
@@ -2088,6 +2080,47 @@ image_package_class::image_package_class(int id_,string label_,string dir_path_)
         dir_path.append(dir_path_);
         dir_path.append("/.");
         lock_enabled=true;
+        //getting the image paths
+        struct dirent *de;  // Pointer for directory entry
+        // opendir() returns a pointer of DIR type.
+        DIR *dr;
+        dr=opendir(return_dir_path().c_str()); 
+        if(dr==NULL)
+        {   cout<<"\nCould not open the directory";}
+        int b=0;
+        string label_data_path=return_dir_path();
+        label_data_path.erase(label_data_path.begin()+label_data_path.length()-1);//removing .
+        while((de = readdir(dr))!=NULL)
+        {
+            if(b>1)
+            {	
+                string image_path;
+                image_path.clear();
+                image_path.append(label_data_path);
+                image_path.append(de->d_name);
+                if(b-2==0)
+                {   
+                    bool fixed=false;
+                    for(int a=0;a<image_path.length();a++)
+                    {
+                        if(image_path.at(a)=='/' && image_path.at(a+1)=='.' && fixed==false)
+                        {
+                            image_path.erase(0,a);
+                            fixed=true;
+                        }
+                    }
+                }
+                if(strcasestr(de->d_name,".jpg") || strcasestr(de->d_name,".jpeg") || strcasestr(de->d_name,".png"))//filters the file format
+                {  
+                    image_file_name.push_back(de->d_name);
+                    image_paths.push_back(image_path);
+                }
+                b++;
+            }
+            else if(b<=1)
+            {   b++;}  
+        }
+        closedir(dr);
     }
     else
     {   cout<<"object locked";}

@@ -8,6 +8,8 @@ Data package class
 #include<iostream>
 #include<fstream>
 #include<string>
+//for dir related functions
+#include<dirent.h>
 //for random generator required for the plot_obj_maps function but looks like without these .h files the program is working.
 #include<stdlib.h>     /* srand, rand */
 #include<time.h>       /* time */
@@ -31,7 +33,6 @@ class image_package_class
     float color_sensitiviy;
     float color_sensitivity2;
     float percentage_of_close_pixels;//used with color_distance2 function
-    int no_of_sq_areas_need_to_be_checked_for_avg_color=1;//used by the similar_obj_combining_process. To be exact by this function find_neighbouring_obj_avg_color_of_closest_area
     int slice_row_size,slice_col_size,min_size_of_obj=0;//min_size_fo_obj used for testing using plot_obj_maps function.
     //prepared data structures and objs
     struct image_map_element
@@ -162,12 +163,11 @@ class image_package_class
     void save_current_img_data();
     void clean_image_package_class_entierly(bool clean_prepared_data);
     //meta data functions
-    void enter_image_metadata(string img_name,string img_path);
     void enter_image_metadata(int id_,string label_,string dir_path_);
     void enter_image_metadata(int start_index,vector<string> *img_file_name,vector<string> *img_paths);
     void remove_image_metadata(int start_index);
     //setting up of training critical variables
-    void enter_training_critical_variables(int no_of_sq_areas_need_to_be_checked_for_avg_color,float color_sensi,float colot_sensi,int min_size_of_obj1);
+    void enter_training_critical_variables(float color_sensi,float colot_sensi,int min_size_of_obj1);
     //threading functions
     void split_package_data(vector<image_package_class*> *ipc_vec);//ok tested
     void combine_package_data(vector<image_package_class*> *ipc_vec);//ok tested

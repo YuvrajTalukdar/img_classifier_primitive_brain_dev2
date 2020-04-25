@@ -381,11 +381,135 @@ bool brain_class::load_brain_architectue_map_file_if_found(bool &close_status)
     return file_found;
 }
 
+void brain_class::parallel_ipc_handler()
+{
+    image_package_class *image_package_obj;//so old name still exist ha ha!!!
+    vector<image_package_class*> image_package_vec;
+    ifstream stream1("image_data/dataset_table.csv",ios::in);
+    string line;
+    stream1>>line;
+    cout<<"\nline1="<<line;
+    stream1>>line;
+    cout<<"\nline2="<<line;
+    while(stream1)
+    {
+        string line2;
+        stream1>>line2;
+        line=line2;
+        if(stream1.eof())
+        {   break;}
+        char line_arr[line.length()],ch[2];
+        for(int a=0;a<line.length();a++)
+	    {   line_arr[a]='\0';}	
+
+        int word_index=0;
+        if(stream1.eof())
+        {   break;}	
+        
+        int id_temp;
+        string label_temp,dir_path_temp;
+        label_temp.clear();
+        dir_path_temp.clear();
+        for(int a=0;a<line.length();a++)
+        {    
+            if(line.at(a)==',')
+            { 
+                word_index++;
+                if(word_index==1)
+                {   id_temp=atoi(line_arr);}
+                else if(word_index==2)
+                {   label_temp.assign(line_arr);}
+                else if(word_index==3) 
+                {   dir_path_temp.assign(line_arr);}
+                for(int b=0;b<line.length();b++)
+                {   line_arr[b]='\0';}
+                continue;
+            }
+            ch[0]=line.at(a);
+            ch[1]='\0';
+            strcat(line_arr,ch);
+        }
+        image_package_obj=new image_package_class(id_temp,label_temp,dir_path_temp);
+        image_package_vec.push_back(image_package_obj);  
+    }
+
+    //this class is required for handling the parallization for the label. Inside this class the data process parallization is done.
+    class parallel_processing_label_wise
+    {
+        private:
+        int color_sensitivity=5;//8,5 for the color mapper
+        int color_sensitivity2=40;//40,25,10//for un strict combinations
+        int min_size_of_obj=40;//40
+        public:
+        image_package_class* obj;
+        void parallization_of_each_label_data_processing()
+        {
+            short int no_of_physical_threads=thread::hardware_concurrency();
+            vector<image_package_class*> ipc_vec;
+            //creation of objs for threads
+            obj->enter_training_critical_variables(color_sensitivity,color_sensitivity2,min_size_of_obj);
+            for(int a=0;a<no_of_physical_threads-1;a++)
+            {
+                image_package_class* new_obj=new image_package_class();
+                new_obj->enter_training_critical_variables(color_sensitivity,color_sensitivity2,min_size_of_obj);
+                ipc_vec.push_back(new_obj);
+            }
+            obj->split_package_data(&ipc_vec);
+            ipc_vec.push_back(obj);
+            //threading process
+                //running the threads
+            cout<<"\nstart!!";
+            //int gh;cin>>gh;
+            vector<thread*> thread_vec;
+            for(int a=0;a<ipc_vec.size();a++)
+            {   
+                thread* worker_thread=new thread(&image_package_class::start_data_preparation_process,ipc_vec.at(a));
+                thread_vec.push_back(worker_thread);
+            }
+            for(int a=0;a<ipc_vec.size();a++)
+            {   
+                thread_vec.at(a)->join();
+                delete thread_vec.at(a);
+            }
+            thread_vec.clear();
+            //data combining process
+            ipc_vec.pop_back();
+            //obj->combine_package_data(&ipc_vec);//this function is not used currently but will be used once the final result is arrived
+            for(int a=0;a<ipc_vec.size();a++)
+            {   delete ipc_vec[a];}
+            ipc_vec.clear();
+            cout<<"\nfinised a label....";
+        }
+    };
+    vector<parallel_processing_label_wise> label_wise_data_processor_obj(image_package_vec.size());
+    //single thread wise
+    /*for(int a=0;a<label_wise_data_processor_obj.size();a++)
+    {
+        label_wise_data_processor_obj.at(a).obj=image_package_vec.at(a);
+        label_wise_data_processor_obj.at(a).parallization_of_each_label_data_processing();
+    }*/
+    //multi threaded wise
+    vector<thread*> label_wise_data_processor_thread_vec;
+    for(int a=0;a<label_wise_data_processor_obj.size();a++)
+    {
+        label_wise_data_processor_obj.at(a).obj=image_package_vec.at(a);
+        thread* worker_thread=new thread(&parallel_processing_label_wise::parallization_of_each_label_data_processing,label_wise_data_processor_obj.at(a));
+        label_wise_data_processor_thread_vec.push_back(worker_thread);
+    }
+    for(int a=0;a<label_wise_data_processor_thread_vec.size();a++)
+    {   
+        label_wise_data_processor_thread_vec.at(a)->join();
+        delete label_wise_data_processor_thread_vec.at(a);
+    }
+}
+
 void brain_class::brain_process_handler()
 {
+    thread ipc_thread(&brain_class::parallel_ipc_handler,this);
+    ipc_thread.join();
     //inter segment connections may be present here in future versions
     //start segemnt using threads
-    vector<pthread_t> threadIds(brain_segment.size());
+    /*vector<pthread_t> threadIds(brain_segment.size());
     vector<int> errors(brain_segment.size());
     for(int a=0;a<brain_segment.size();a++)
     {   errors[a]=pthread_create(&threadIds[a],NULL,(THREADFUNCPTR) &segment_class::segment_process_handler,&brain_segment[a]);}
@@ -394,7 +518,7 @@ void brain_class::brain_process_handler()
         {   cout << "\nThread "<<a<< " creation failed : " << strerror(errors[a]);}
     }
     for(int a=0;a<brain_segment.size();a++)
-    {  errors[a]=pthread_join(threadIds[a],NULL);}
+    {  errors[a]=pthread_join(threadIds[a],NULL);}*/
 }
 
 void brain_class::initialize_brain()
@@ -424,6 +548,8 @@ void brain_class::initialize_brain()
                 {   cout<<"\n   core_no= "<<brain_segment[a].return_core_no(b)<<" core_aim= "<<brain_segment[a].return_core_aim(b)<<" no_of_core_file_names= "<<brain_segment[a].return_no_of_corefilenames();}
             }
             brain_process_handler();
+            cout<<"\n\nfinished!!!!!";
+            int gh;cin>>gh;
         }
         else if(brain_table.size()==0)
         {   cout<<"ERROR!!! brain table not found   shuting down...";}
