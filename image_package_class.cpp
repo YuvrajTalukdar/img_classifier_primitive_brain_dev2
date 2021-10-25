@@ -92,8 +92,8 @@ bool image_package_class::color_distance(image_map_element* origin_element,image
                 conversion_mat2.at<Vec3b>(b,c)[0]=new_element->avg_blue;    
             }
         }
-        cvtColor(conversion_mat1,hsv1,CV_BGR2HSV);
-        cvtColor(conversion_mat2,hsv2,CV_BGR2HSV);
+        cvtColor(conversion_mat1,hsv1,COLOR_BGR2HSV);
+        cvtColor(conversion_mat2,hsv2,COLOR_BGR2HSV);
         conversion_mat1.release();
         conversion_mat2.release();
         //       +
@@ -754,13 +754,9 @@ void image_package_class::create_color_maps()//color maper function//ok tested
     }
 }
 
-/*void image_package_class::onMouse(int evt,int x,int y,int flags,void* param,void* userdata)
-{
-
-}*/
 void image_package_class::onMouse(int evt,int x,int y,int flags,void* param)
 {
-    if(evt==CV_EVENT_LBUTTONDOWN)
+    if(evt==EVENT_LBUTTONDOWN)
     {
         vector<Point>* ptPtr= (std::vector<cv::Point>*)param;
         ptPtr->push_back(Point(x,y));
@@ -819,7 +815,7 @@ void image_package_class::second_stage_analyzer(Mat plot,int slice_size)
                         conversion_mat.at<Vec3b>(a,b)[0]=avg_b;
                     }
                 }
-                cvtColor(conversion_mat,hsv,CV_BGR2HSV);
+                cvtColor(conversion_mat,hsv,COLOR_BGR2HSV);
                 conversion_mat.release();
                 float avg_h=(int)hsv.at<Vec3b>(0,0)[0];
                 //avg_h=(avg_h/180.0)*255.0;//for only the unstrict layer
@@ -839,6 +835,40 @@ void image_package_class::second_stage_analyzer(Mat plot,int slice_size)
         waitKey(10);
     }
 }
+
+void image_package_class::next_image_button(int state, void* userdata)
+{
+    bool* continue_loop = (bool*)userdata;
+    (*continue_loop)=false;
+}
+
+void image_package_class::annote_object(int state, void* data)
+{
+
+}
+
+void image_package_class::select_opject(int evt,int x,int y,int flags,void* param)
+{
+    click_data* data=(click_data*)param;
+    //vector<Point>* ptPtr= (std::vector<cv::Point>*)param;
+    //ptPtr->push_back(Point(x,y));
+    if(evt==EVENT_LBUTTONDOWN)
+    {
+        data->points.push_back(Point(x,y));
+    }
+    else if(evt==EVENT_MBUTTONUP)
+    {
+        data->m_btn_down=false;
+        data->points.push_back(Point(x,y));
+    }
+    else if(evt==EVENT_MBUTTONDOWN)
+    {
+        data->m_btn_down=true;
+        if(data->points.size()==0)
+        {   data->points.push_back(Point(x,y));}
+    }
+}
+
 
 void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,vector<vector<image_map_element*>>* image_map1,string orig_img_path)//for testing create_color_maps() function//ok tested
 {
@@ -881,14 +911,105 @@ void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_
     cout<<"\ntotal_no_of_elements_calc="<<total_no_of_elements_calc;
     string img_name;
     img_name.append(orig_img_path);
-    //img_name.append(to_string(color_sensitiviy));
-    //img_name.push_back(',');
-    //img_name.push_back(*to_string(slice_row_size).c_str());
     img_name.append(".png");
     //second_stage_analyzer(obj_map_plotted,slice_row_size);//for testing
-    imwrite(img_name.c_str(),obj_map_plotted);
-    //imshow("obj_map",*orig_image_temp1);
-    //waitKey(0);
+    if(!annote_mode)
+    {   imwrite(img_name.c_str(),obj_map_plotted);}
+    else
+    {
+        namedWindow(img_name,WINDOW_NORMAL);
+        resizeWindow(img_name,1920,1080);
+        bool continue_loop=true;
+        createButton("Next Image",next_image_button,(void*)&continue_loop,QT_PUSH_BUTTON,false);
+        createButton("Annote Object",annote_object,NULL,QT_PUSH_BUTTON,false);
+        click_data data;
+
+        setMouseCallback(img_name,select_opject, (void*)&data);
+        Mat combined_mat=Mat();
+        //addWeighted(*orig_image_temp1,0.6,obj_map_plotted,0.8,0,combined_mat);
+
+        while(continue_loop)
+        {
+            if(data.points.size()==1 && data.m_btn_down==false)
+            {
+                int obj_id=image_map1->at(data.points.at(0).y/slice_row_size).at(data.points.at(0).x/slice_col_size)->obj_id;
+                int obj_index=binary_search_for_strict(obj_vec_for_one_img,obj_id);
+                data.points.clear();
+                bool found=false;
+                int rand_red,rand_green,rand_blue;
+                if(selected_obj_index.find(obj_index)!=selected_obj_index.end())
+                {   
+                    found=true;
+                    selected_obj_index.erase(obj_index);
+                }
+                colour_obj(obj_map_plotted,obj_vec_for_one_img->at(obj_index),found);
+                //addWeighted(*orig_image_temp1,0.6,obj_map_plotted,0.8,0,combined_mat);
+                if(!found)
+                {   selected_obj_index.insert(obj_index);}
+            }
+            else if(data.points.size()==2 && data.m_btn_down==false)//obj under the square
+            {
+                vector<vector<int>> img_map_co_ordinates;
+                for(int a=0;a<data.points.size();a++)
+                {
+                    //cout<<"\nx="<<data.points.at(a).x<<" y="<<data.points.at(a).y<<" a="<<a;
+                    vector<int> xy(2);
+                    xy[0]=data.points.at(a).x/slice_col_size;
+                    xy[1]=data.points.at(a).y/slice_row_size;
+                    img_map_co_ordinates.push_back(xy);
+                }
+                data.points.clear();
+                int low_x,low_y,high_x,high_y;
+                if(img_map_co_ordinates.at(0)[0]<img_map_co_ordinates.at(1)[0])
+                {
+                    low_x=img_map_co_ordinates.at(0)[0];
+                    high_x=img_map_co_ordinates.at(1)[0];
+                }
+                else
+                {
+                    low_x=img_map_co_ordinates.at(1)[0];
+                    high_x=img_map_co_ordinates.at(0)[0];
+                }
+                if(img_map_co_ordinates.at(0)[1]<img_map_co_ordinates.at(1)[1])
+                {
+                    low_y=img_map_co_ordinates.at(0)[1];
+                    high_y=img_map_co_ordinates.at(1)[1];
+                }
+                else
+                {
+                    low_y=img_map_co_ordinates.at(1)[1];
+                    high_y=img_map_co_ordinates.at(0)[1];
+                }
+                set<int> obj_id_set;//for speeding things up
+                for(int a=low_x;a<=high_x;a++)
+                {
+                    for(int b=low_y;b<=high_y;b++)
+                    {
+                        if(obj_id_set.find(image_map1->at(b).at(a)->obj_id)==obj_id_set.end())
+                        {
+                            int obj_index=binary_search_for_strict(obj_vec_for_one_img,image_map1->at(b).at(a)->obj_id);
+                            obj_id_set.insert(image_map1->at(b).at(a)->obj_id);
+                            if(selected_obj_index.find(obj_index)==selected_obj_index.end())
+                            {   
+                                selected_obj_index.insert(obj_index);
+                                colour_obj(obj_map_plotted,obj_vec_for_one_img->at(obj_index),false);
+                            }
+                            else
+                            {
+                                selected_obj_index.erase(obj_index);
+                                colour_obj(obj_map_plotted,obj_vec_for_one_img->at(obj_index),true);
+                            }
+                        }
+                        
+                    }
+                }
+                obj_id_set.clear();
+            }
+            imshow(img_name,obj_map_plotted);
+            waitKey(10);
+        }
+        destroyWindow(img_name);
+    }
     orig_image_temp1->release();
     delete orig_image_temp1;
     cout<<"\ncols="<<obj_map_plotted.cols<<" rows="<<obj_map_plotted.rows;
@@ -896,6 +1017,35 @@ void image_package_class::plot_obj_maps(vector<vector<image_map_element*>>* obj_
     //imshow("obj_map",obj_map_plotted);
     //waitKey(0);
     obj_map_plotted.release();
+}
+
+void image_package_class::colour_obj(Mat& obj_map_plotted,vector<image_map_element*>& obj,bool use_rand_color)
+{
+    int rand_red,rand_green,rand_blue;
+    if(use_rand_color)
+    {   rand_red=rand()%255+0,rand_green=rand()%255+0,rand_blue=rand()%255+0;}
+    for(int a=0;a<obj.size();a++)
+    {
+        int orig_row_index=obj.at(a)->row_index*slice_row_size,orig_col_index=obj.at(a)->col_index*slice_col_size;
+        for(int e=orig_row_index;e<orig_row_index+slice_row_size;e++)
+        {
+            for(int f=orig_col_index;f<orig_col_index+slice_col_size;f++)
+            {
+                if(use_rand_color)
+                {
+                    obj_map_plotted.at<Vec3b>(e,f)[0]=rand_blue;//blue
+                    obj_map_plotted.at<Vec3b>(e,f)[1]=rand_green;//green
+                    obj_map_plotted.at<Vec3b>(e,f)[2]=rand_red;//red
+                }
+                else
+                {
+                    obj_map_plotted.at<Vec3b>(e,f)[0]=0;//blue
+                    obj_map_plotted.at<Vec3b>(e,f)[1]=0;//green
+                    obj_map_plotted.at<Vec3b>(e,f)[2]=0;//red
+                }
+            }
+        }
+    }
 }
 
 bool image_package_class::check_if_element_is_border_element(image_map_element* element)
@@ -1097,7 +1247,7 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
                     //binary_searcher
                     else if(neighbouring_obj_search_mode==1)
                     {
-                        int required_index=binary_search_for_strict(0,list_of_all_objs->size()-1,list_of_all_objs,image_map.at(new_row_index).at(new_col_index)->obj_id);
+                        int required_index=binary_search_for_strict(list_of_all_objs,image_map.at(new_row_index).at(new_col_index)->obj_id);
                         if(required_index!=-1)
                         results->push_back(list_of_all_objs->at(required_index));
                     }
@@ -1110,15 +1260,20 @@ void image_package_class::find_neighbouring_objs(vector<image_map_element*> *obj
     third+=duration3.count();
 }
 
-int image_package_class::binary_search_for_strict(int start_index,int end_index,vector<vector<image_map_element*>>* obj_vec_temp,int search_id)
+int image_package_class::binary_search_for_strict(vector<vector<image_map_element*>>* obj_vec_temp,int search_id)
 {
-    int current_index=(end_index-start_index)/2+start_index;
-    if(obj_vec_temp->at(current_index).at(0)->obj_id==search_id)
-    {   return current_index;}
-    else if(obj_vec_temp->at(current_index).at(0)->obj_id>search_id)
-    {   binary_search_for_strict(start_index,current_index-1,obj_vec_temp,search_id);}
-    else if(obj_vec_temp->at(current_index).at(0)->obj_id<search_id)
-    {   binary_search_for_strict(current_index+1,end_index,obj_vec_temp,search_id);}
+    int start_index=0,end_index=obj_vec_temp->size()-1;
+    while(start_index<=end_index)
+    {
+        int current_index=(end_index-start_index)/2+start_index;
+        if(obj_vec_temp->at(current_index).at(0)->obj_id==search_id)
+        {   return current_index;}
+        else if(obj_vec_temp->at(current_index).at(0)->obj_id>search_id)
+        {   end_index=current_index-1;}
+        else if(obj_vec_temp->at(current_index).at(0)->obj_id<search_id)
+        {   start_index=current_index+1;}
+    }
+    return -1;
 }
 
 int image_package_class::find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec)//ok tested
@@ -1363,7 +1518,7 @@ void image_package_class::similar_obj_combinarion_process_un_strict()//ok tested
                 }
             }
             Mat hsv;
-            cvtColor(conversion_mat,hsv,CV_BGR2HSV);
+            cvtColor(conversion_mat,hsv,COLOR_BGR2HSV);
             float hue_c=(int)hsv.at<Vec3b>(0,0)[0];
             hue_c=(hue_c/180.0)*255.0;
             conversion_mat.release();
@@ -1627,7 +1782,7 @@ void image_package_class::variable_thershold_sobel(Mat &img1,Mat &sobel_result,v
     vector<Mat*> img_vec;
     img_vec.push_back(&img1);
     Mat hsv;
-    cvtColor(img1,hsv,CV_BGR2HSV);
+    cvtColor(img1,hsv,COLOR_BGR2HSV);
     vector<Mat> hsv_channels;
     split(hsv,hsv_channels);
     Mat s=hsv_channels[1];  
@@ -1823,30 +1978,29 @@ void image_package_class::start_data_preparation_process()
     for(unsigned int a=0;a<image_paths.size();a++)
     {
         cout<<"\npath="<<image_paths[a];
-        auto start = high_resolution_clock::now(); 
+        auto start1 = high_resolution_clock::now(); 
         cout<<"\npreprocessing going on...";
         orig_image_temp=new Mat();
         *orig_image_temp=imread(image_paths[a]);
-        vector<Mat> channels;
-        cvtColor(*orig_image_temp,*orig_image_temp,CV_BGR2HSV);
+        //img to bgr, bgr to hsv, hsv to bgr conversion 
+        /*vector<Mat> channels;
+        cvtColor(*orig_image_temp,*orig_image_temp,COLOR_BGR2HSV);
         split(*orig_image_temp,channels);
         merge(channels,*orig_image_temp);
         cvtColor(*orig_image_temp,*orig_image_temp,COLOR_HSV2BGR);
         channels[0].release();
         channels[1].release();
         channels[2].release();
-        channels.clear();
+        channels.clear();*/
         
         //data preparation step 1
-        auto stop = high_resolution_clock::now(); 
+        auto stop1 = high_resolution_clock::now(); 
         if(perform_time_analysis==true)
         { 
-            auto duration1 = duration_cast<microseconds>(stop - start); 
-            cout<<"\nduration= "<<duration1.count()<<" microseconds";
+            auto duration1 = duration_cast<microseconds>(stop1 - start1); 
+            cout<<"\npre-processing duration= "<<duration1.count()<<" microseconds";
         }
-        
-        auto start2 = high_resolution_clock::now(); 
-        cout<<"\ncolor mapping...";
+        //initializing settings
         float upper_limit=938400,lower_limit=100000;//100000
         if(orig_image_temp->rows*orig_image_temp->cols>=upper_limit)
         {
@@ -1865,7 +2019,15 @@ void image_package_class::start_data_preparation_process()
             slice_col_size=percentage+2;
             slice_row_size=percentage+2;
         }
+        auto start2 = high_resolution_clock::now(); 
+        cout<<"\nmodified_sobel...";
         modified_sobel_process_handler();
+        auto stop2 = high_resolution_clock::now();
+        if(perform_time_analysis==true)
+        {
+            auto duration5 = duration_cast<microseconds>(stop2 - start2);  
+            cout<<"\nModified sobel duration= "<<duration5.count()<<" microseconds";
+        }
         //string name[3]={"high","low","all"};
         //string str=image_file_name[a]+name[2]+".jpg";
         //imwrite(str,sobel_plus_edge);
@@ -1873,37 +2035,36 @@ void image_package_class::start_data_preparation_process()
         //imwrite(str,low_res_edge);
         //str=image_file_name[a]+name[0]+".jpg";
         //imwrite(str,high_res_edge);
-        //continue;
-        create_color_maps();
-        sobel_plus_edge.release();
-        low_res_edge.release();
-        //cout<<"\nx2="<<image_map[0].size()<<" y2="<<image_map.size();
-        auto stop2 = high_resolution_clock::now(); 
-        if(perform_time_analysis==true)
-        {  
-            auto duration2 = duration_cast<microseconds>(stop2 - start2); 
-            cout<<"\nduration= "<<duration2.count()<<" microseconds";
-        }
         auto start3 = high_resolution_clock::now(); 
-        cout<<"\nstrict process...";
-        similar_obj_combination_process_strict();//no data leakage till here
-        high_res_edge.release();
+        cout<<"\ncolor mapping...";
+        create_color_maps();
+        sobel_plus_edge.release();//this is in a position to be used, but not used till now.
+        low_res_edge.release();//this is heavily used
+        high_res_edge.release();//this is not used at all.
+        //cout<<"\nx2="<<image_map[0].size()<<" y2="<<image_map.size();
         auto stop3 = high_resolution_clock::now(); 
         if(perform_time_analysis==true)
+        {  
+            auto duration2 = duration_cast<microseconds>(stop3 - start3); 
+            cout<<"\nduration= "<<duration2.count()<<" microseconds";
+        }
+        auto start4 = high_resolution_clock::now(); 
+        cout<<"\nstrict process...";
+        similar_obj_combination_process_strict();//no data leakage till here
+        auto stop4 = high_resolution_clock::now(); 
+        if(perform_time_analysis==true)
         {
-            auto duration3 = duration_cast<microseconds>(stop3 - start3); 
-            cout<<"\nduration= "<<duration3.count()<<" microseconds";
+            auto duration3 = duration_cast<microseconds>(stop4 - start4); 
+            cout<<"\nStrict duration= "<<duration3.count()<<" microseconds";
+            //these are for benchmarking specific part of strict function.
             cout<<"\nfind_neighbouring_objs_timer= "<<find_neighbouring_objs_timer;
             cout<<"\nfind_neighbouring_obj_avg_color_of_closest_area_timer= "<<find_neighbouring_obj_avg_color_of_closest_area_timer;
             cout<<"\nfirst= "<<first;
             cout<<"\nsecond= "<<second;
             cout<<"\nthird= "<<third;
         }
-        
-        //cout<<"\ntesting...........";
-        //plot_obj_maps(&obj_vec,&image_map,image_paths[a]);
 
-        auto start4 = high_resolution_clock::now(); 
+        /*auto start4 = high_resolution_clock::now(); 
         cout<<"\nunstrict process...";
         //similar_obj_combinarion_process_un_strict();//leakage fixed
         auto stop4 = high_resolution_clock::now();
@@ -1911,22 +2072,9 @@ void image_package_class::start_data_preparation_process()
         {
             auto duration4 = duration_cast<microseconds>(stop4 - start4); 
             cout<<"\nduration= "<<duration4.count()<<" microseconds";
-        }
-        //data preparation step 2
+        }*/
         
-        auto start5 = high_resolution_clock::now(); 
-        cout<<"\nmodified_sobel...";
-        //modified_sobel();
-        auto stop5 = high_resolution_clock::now();
-        if(perform_time_analysis==true)
-        {
-            auto duration5 = duration_cast<microseconds>(stop5 - start5);  
-            cout<<"\nduration= "<<duration5.count()<<" microseconds";
-        }
-        
-        //data preparation step 3
         //border_info_extractor();
-        //data preparation step 4
         //data_arranger();
         orig_image_temp->release();
         delete orig_image_temp;
@@ -1938,7 +2086,7 @@ void image_package_class::start_data_preparation_process()
         if(perform_time_analysis==true)
         {
             auto duration6 = duration_cast<microseconds>(stop6 - start6);  
-            cout<<"\nduration= "<<duration6.count()<<" microseconds";
+            cout<<"\nPlot duration= "<<duration6.count()<<" microseconds";
         }
         clean_image_package_class_entierly(true);
     }

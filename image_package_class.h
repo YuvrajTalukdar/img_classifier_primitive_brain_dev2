@@ -68,6 +68,7 @@ class image_package_class
         vector<string> image_paths;    
 
     public:
+    bool annote_mode=false;
     // return functions
     string return_dir_path()
     {   return dir_path;}
@@ -82,7 +83,7 @@ class image_package_class
     void data_arranger();
 
     void border_info_extractor();
-        //data preparation step 2
+    //modified sobel functions
     struct pixel
     {
         int edge_id;
@@ -106,10 +107,12 @@ class image_package_class
         float smallest_distance;
         bool select_status=false;
     };
-    void obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs);//ok tested
+    
     //similar obj combination process un-strict
+    void obj_info_gatherer(int a,vector<obj_info> *obj_info_vec,vector<vector<image_map_element*>> *list_of_neighbouring_objs);//ok tested
     void similar_obj_combinarion_process_un_strict();//ok tested
     vector<vector<image_map_element*>>* list_of_obj_to_be_combined_ptr;
+    
     //similar object combination process strict
     int find_neighbouring_obj_avg_color_of_closest_area(vector<image_map_element*> *obj,vector<vector<image_map_element*>> *list_of_neighbouring_objs,vector<image_map_element*> *border_element_vec);//ok tested
     bool check_if_element_is_border_element(image_map_element* element);//ok tested
@@ -120,7 +123,7 @@ class image_package_class
         bool operator() (vector<image_map_element*> vec1,vector<image_map_element*> vec2) 
         { return (vec1.size()<vec2.size());}
     }sorting_helper1;*/ 
-    int binary_search_for_strict(int start_index,int end_index,vector<vector<image_map_element*>>* obj_vec_temp,int search_id);
+    int binary_search_for_strict(vector<vector<image_map_element*>>* obj_vec_temp,int search_id);
     void similar_obj_combination_process_strict();//ok testing
     //geans problem solution functions
     struct cell_stat
@@ -139,7 +142,8 @@ class image_package_class
         vector<vector<cell_stat>> visible_cell_set_wise;
     };
     bool border_conflict_status(int orig_img_map_row_index,int orig_img_map_col_index,int img_map_row_index,int img_map_col_index,vector<conflicting_cell> &potential_conflicting_cell_vec);
-    //object mapping proceess functions
+    
+    //color map creation function.
     int avg_color_in_slice(Mat &slice,char color);//color maper function//ok tested  
     vector<image_map_element*> *obj_elements_vec_ptr;//required for the color distance calculator
     float hue_distance_calc(float hi,float h2);
@@ -148,8 +152,8 @@ class image_package_class
     void remove_non_free_elements(vector<vector<int>>* result);//color maper function//ok tested
     void create_color_maps();//color maper function//ok tested
     float get_color_sensitivity(image_map_element* origin_element,image_map_element* new_element);
+    
     //testing functions and variables
-    //static void onMouse(int evt,int x,int y,int flags,void* param,void* userdata);
     static void onMouse(int evt,int x,int y,int flags,void* param);
     void second_stage_analyzer(Mat plot,int slice_size);
     void plot_obj_maps(vector<vector<image_map_element*>>* obj_vec_for_one_img,vector<vector<image_map_element*>>* image_map1,string orig_img_path);//for testing create_color_maps() function
@@ -162,19 +166,36 @@ class image_package_class
     void clean_up_prepared_data_obj();
     void save_current_img_data();
     void clean_image_package_class_entierly(bool clean_prepared_data);
+    
     //meta data functions
     void enter_image_metadata(int id_,string label_,string dir_path_);
     void enter_image_metadata(int start_index,vector<string> *img_file_name,vector<string> *img_paths);
     void remove_image_metadata(int start_index);
+    
     //setting up of training critical variables
     void enter_training_critical_variables(float color_sensi,float colot_sensi,int min_size_of_obj1);
+    
     //threading functions
     void split_package_data(vector<image_package_class*> *ipc_vec);//ok tested
     void combine_package_data(vector<image_package_class*> *ipc_vec);//ok tested
+    
     //constructor
     image_package_class(int id_,string label_,string dir_path_);
     image_package_class();
+
     //cleanup function
     void clean_up_all_the_data_addresses();
+
+    //Annotate image functions
+    static void next_image_button(int state, void* userdata);
+    static void select_opject(int evt,int x,int y,int flags,void* param);
+    set<int> selected_obj_index;
+    struct click_data
+    {
+        bool m_btn_down=false;
+        vector<Point> points;
+    };
+    void colour_obj(Mat& obj_map_plotted,vector<image_map_element*>& obj,bool use_rand_color);
+    static void annote_object(int state, void* data);
 };
 #endif

@@ -39,6 +39,8 @@ class brain_class{
         bool core_files_available=false;
     }loaded_brain_architecture;
     vector<segment_class> brain_segment;
+    int train_test_predict_annote_code=-1;
+    bool test_predict_available=false;
     //brain baisc structure handling functions.
     void restore_brain_state();
     int brain_state_file_chooser(vector<brain_state_file_identifier> brain_state_file_identifier_vec);
